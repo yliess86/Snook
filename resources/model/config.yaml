@@ -1,0 +1,84 @@
+model:
+  locnet:
+    layers:
+    - inp: 16
+      out: 24
+      t  :  1
+    - inp: 24
+      out: 32
+      t  :  6
+    - inp: 32
+      out: 64
+      t  :  6
+    scale     : 0.4
+    repeat    : 1
+    activation: ReLU
+  
+  masknet:
+    layers:
+    - inp: 16
+      out: 24
+      t  :  1
+    - inp: 24
+      out: 32
+      t  :  6
+    - inp: 32
+      out: 64
+      t  :  6
+    scale     : 0.4
+    repeat    : 1
+    activation: ReLU
+  
+  labelnet:
+    scale     : 0.4
+    activation: ReLU
+
+
+trainer:
+  locnet:
+    dataset:
+      train_render: ./resources/data/dataset/train/render
+      train_data  : ./resources/data/dataset/train/data
+      valid_render: ./resources/data/dataset/valid/render
+      valid_data  : ./resources/data/dataset/valid/data
+      test_render : ./resources/data/dataset/test/render
+      test_data   : ./resources/data/dataset/test/data
+    hyperparameters:
+      lr          : 1e-3
+      weight_decay: 5e-4
+      epochs      : 15
+      batch_size  :  8
+      steps       :  4
+      loss        : AdaptiveWingLoss
+      mask        : True
+      spread:
+        start: 8.0
+        end  : 2.0
+  
+  masknet:
+    dataset:
+      train_render: ./resources/data/dataset/train/render
+      train_data  : ./resources/data/dataset/train/data
+      valid_render: ./resources/data/dataset/valid/render
+      valid_data  : ./resources/data/dataset/valid/data
+      test_render : ./resources/data/dataset/test/render
+      test_data   : ./resources/data/dataset/test/data
+    hyperparameters:
+      lr          : 1e-3
+      weight_decay: 5e-4
+      epochs      : 3
+      batch_size  : 8
+  
+  labelnet:
+    dataset:
+      train_render: ./resources/data/dataset/train/render
+      train_data  : ./resources/data/dataset/train/data
+      valid_render: ./resources/data/dataset/valid/render
+      valid_data  : ./resources/data/dataset/valid/data
+      test_render : ./resources/data/dataset/test/render
+      test_data   : ./resources/data/dataset/test/data
+    hyperparameters:
+      lr          : 1e-3
+      weight_decay: 5e-4
+      epochs      :   3
+      batch_size  : 128

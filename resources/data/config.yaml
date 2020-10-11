@@ -1,0 +1,39 @@
+resources:
+  pool       : ./resources/data/fbx/pool.fbx
+  cue        : ./resources/data/fbx/cue.fbx
+  black_ball : ./resources/data/fbx/ball_black.fbx
+  white_ball : ./resources/data/fbx/ball_white.fbx
+  yellow_ball: ./resources/data/fbx/ball_yellow.fbx
+  red_ball   : ./resources/data/fbx/ball_red.fbx
+  hdris      : ./resources/data/hdri
+
+render:
+  width  : 256
+  height : 256
+  tile   :  64
+  samples:  64
+  denoise: False
+
+camera:
+  sensor_fit         : HORIZONTAL
+  sensor_width       : 36.0
+  sensor_height      : 24.0
+  lens               : 85.0
+  dof_aperture_fstop :  1.4
+  dof_aperture_blades: 11.0
+
+generator:
+  pool_half_width:  2.07793
+  pool_half_height: 1.03677
+  pool_depth:       1.70342
+  ball_on_pool    : 0.5
+  cue_on_ball     : 0.8
+  cue_is_visible  : 0.8
+  ball_radius     : 0.050
+  cue_distance_max: 1.5
+  cam_dist_range:
+  - 10.0
+  - 15.0
+  hdri_scale_range:
+  -  0.5
+  - 25.0
