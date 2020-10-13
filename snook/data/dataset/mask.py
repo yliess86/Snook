@@ -17,22 +17,24 @@ class MaskDataset(Dataset):
         self.data = sorted([os.path.join(data, f) for f in os.listdir(data)])
         if train:
             self.transforms = transforms.Compose([
+                transforms.Resize(64, interpolation=Image.NEAREST),
                 transforms.ColorJitter(0.2, 0.2, 0.2, 0.2),
                 transforms.ToTensor(),
                 transforms.RandomErasing(),
             ])
         else:
-            self.transforms = transforms.Compose([transforms.ToTensor()])
+            self.transforms = transforms.Compose([transforms.Resize(64, interpolation=Image.NEAREST), transforms.ToTensor()])
+        self.mask_transforms = transforms.Compose([transforms.Resize(64, interpolation=Image.NEAREST), transforms.ToTensor()])
 
     def __len__(self) -> int:
         return len(self.render)
 
-    def _build_mask(self, data: Dict, img: Image) -> np.ndarray:
+    def _build_mask(self, data: Dict, img: Image) -> Image:
         mask = Image.new(mode='L', size=(img.width, img.height))
         draw = ImageDraw.Draw(mask)
         draw.polygon(tuple(tuple(corner) for corner in data["table"]), fill="white", outline=None)
         
-        return np.array(mask)
+        return mask
 
     def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor]:
         img = Image.open(self.render[idx]).convert("RGB")
@@ -40,6 +42,6 @@ class MaskDataset(Dataset):
             data = yaml.load(f, Loader=yaml.FullLoader)
 
         render = self.transforms(img)
-        mask   = torch.tensor(self._build_mask(data, img) / 255.0, dtype=torch.float32)
+        mask   = self.mask_transforms(self._build_mask(data, img)).squeeze(0)
 
         return render, mask

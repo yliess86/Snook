@@ -35,16 +35,18 @@ class LocDataset(Dataset):
         draw.polygon(tuple(tuple(corner) for corner in data["table"]), fill="white", outline=None)
         mask = np.array(mask)
 
-        balls = np.zeros((img.height, img.width, 6 * 2 + 2))
+        balls = np.zeros((img.height, img.width, 1))
         if "balls" in data and data["balls"] is not None:
+            balls = np.zeros((img.height, img.width, len(data["balls"])))
             for b, ball in enumerate(data["balls"]):
                 grid = np.dstack(np.mgrid[0:img.width, 0:img.height])
                 gauss = multivariate_normal.pdf(grid, mean=tuple(ball["position"]), cov=ball["radius"] * self.spread).T
                 balls[..., b] = gauss / np.max(gauss)
         balls = np.max(balls, axis=-1)
 
-        cues = np.zeros((img.height, img.width, 2))
+        cues = np.zeros((img.height, img.width, 1))
         if "cues" in data and data["cues"] is not None:
+            cues = np.zeros((img.height, img.width, len(data["cues"])))
             for c, cue in enumerate(data["cues"]):
                 grid = np.dstack(np.mgrid[0:img.width, 0:img.height])
                 gauss = multivariate_normal.pdf(grid, mean=tuple(cue["position"]), cov=cue["radius"] * self.spread).T

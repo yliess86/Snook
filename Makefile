@@ -1,5 +1,6 @@
 # Flags
 DEBUG=-d
+CAMERA=2
 
 # Third Party Libraries
 VENDOR=./vendor
@@ -12,7 +13,7 @@ DATA_CONFIG=${DATA}/config.yaml
 DATA_TRAIN=${DATA}/dataset/train
 DATA_VALID=${DATA}/dataset/valid
 DATA_TEST=${DATA}/dataset/test
-DATA_TRAIN_SAMPLES=10_000
+DATA_TRAIN_SAMPLES=100_000
 DATA_VALID_SAMPLES=2_000
 DATA_TEST_SAMPLES=2_000
 
@@ -36,10 +37,10 @@ vendor:
 	sh ${VENDOR_K210}
 
 # Generate Training Validation and Testing Dataset
-dataset: 
-	${PYTHONPATH} python3 -m snook.data.generate -c ${DATA_CONFIG} -r ${DATA_TRAIN}/render -d ${DATA_TRAIN}/data -s ${DATA_TRAIN_SAMPLES}
-	${PYTHONPATH} python3 -m snook.data.generate -c ${DATA_CONFIG} -r ${DATA_VALID}/render -d ${DATA_VALID}/data -s ${DATA_VALID_SAMPLES}
-	${PYTHONPATH} python3 -m snook.data.generate -c ${DATA_CONFIG} -r ${DATA_TEST}/render  -d ${DATA_TEST}/data  -s ${DATA_TEST_SAMPLES}
+dataset:
+	PYTHONPATH=${PYTHONPATH} python3 -m snook.data.generate -c ${DATA_CONFIG} -r ${DATA_TRAIN}/render -d ${DATA_TRAIN}/data -s ${DATA_TRAIN_SAMPLES}
+	PYTHONPATH=${PYTHONPATH} python3 -m snook.data.generate -c ${DATA_CONFIG} -r ${DATA_VALID}/render -d ${DATA_VALID}/data -s ${DATA_VALID_SAMPLES}
+	PYTHONPATH=${PYTHONPATH} python3 -m snook.data.generate -c ${DATA_CONFIG} -r ${DATA_TEST}/render  -d ${DATA_TEST}/data  -s ${DATA_TEST_SAMPLES}
 
 # Train Pytorch Model
 train:
@@ -61,3 +62,7 @@ convert:
 # Benchmark Python Models
 benchmark:
 	python3 -m snook.model.benchmark -c ${MODEL_CONFIG} -m ${MODEL} -s 200
+
+# Demo
+demo:
+	python3 -m snook.demo -m ${MODEL} -c ${CAMERA}

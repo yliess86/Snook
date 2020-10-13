@@ -63,17 +63,17 @@ class DataGenerator:
         self.pool_corners[3].position = np.array([-w, -h, z])
         
     def _setup_cues(self) -> None:
-        self.cues = [FbxObj(self.resources_conf.cue, i) for i in range(2)]
-        self.cues_target = [EmptyObj("cue_target", i) for i in range(2)]
-        self.cues_width = [EmptyObj("cue_width", i) for i in range(2)]
+        self.cues = [FbxObj(self.resources_conf.cue, i) for i in range(6)]
+        self.cues_target = [EmptyObj("cue_target", i) for i in range(6)]
+        self.cues_width = [EmptyObj("cue_width", i) for i in range(6)]
 
     def _setup_balls(self) -> None:
         self.balls = []
-        self.balls += [FbxObj(self.resources_conf.black_ball)]
-        self.balls += [FbxObj(self.resources_conf.white_ball)]
+        self.balls += [FbxObj(self.resources_conf.black_ball,  i) for i in range(6)]
+        self.balls += [FbxObj(self.resources_conf.white_ball,  i) for i in range(6)]
         self.balls += [FbxObj(self.resources_conf.yellow_ball, i) for i in range(6)]
-        self.balls += [FbxObj(self.resources_conf.red_ball, i) for i in range(6)]
-        self.balls_width = [EmptyObj("ball_width", i) for i in range(6 * 2 + 2)]
+        self.balls += [FbxObj(self.resources_conf.red_ball,    i) for i in range(6)]
+        self.balls_width = [EmptyObj("ball_width", i) for i in range(len(self.balls))]
 
     def _setup_hdri(self) -> None:
         self.hdri = EnvironmentMaps()

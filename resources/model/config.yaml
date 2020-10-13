@@ -22,9 +22,6 @@ model:
     - inp: 24
       out: 32
       t  :  6
-    - inp: 32
-      out: 64
-      t  :  6
     scale     : 0.4
     repeat    : 1
     activation: ReLU
@@ -46,7 +43,7 @@ trainer:
     hyperparameters:
       lr          : 1e-3
       weight_decay: 5e-4
-      epochs      : 15
+      epochs      : 20
       batch_size  :  8
       steps       :  4
       loss        : AdaptiveWingLoss
@@ -66,8 +63,8 @@ trainer:
     hyperparameters:
       lr          : 1e-3
       weight_decay: 5e-4
-      epochs      : 3
-      batch_size  : 8
+      epochs      :  5
+      batch_size  : 32
   
   labelnet:
     dataset:
@@ -80,5 +77,5 @@ trainer:
     hyperparameters:
       lr          : 1e-3
       weight_decay: 5e-4
-      epochs      :   3
-      batch_size  : 128
+      epochs      :  3
+      batch_size  : 64

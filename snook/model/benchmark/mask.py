@@ -33,7 +33,7 @@ class MaskBenchmark:
         model.load_state_dict(torch.load(ckpt, map_location="cpu")["masknet"])
 
         model = model.cpu().eval()
-        x = torch.randn((1, 3, 256, 256), requires_grad=False)
+        x = torch.randn((1, 3, 64, 64), requires_grad=False)
         with Benchmark("[MaskNet][Vanilla][CPU]") as bm:
             bm(samples, lambda: model(x))
             self.benchmark["Vanilla"]["CPU"] = bm.fps
@@ -50,7 +50,7 @@ class MaskBenchmark:
         model = torch.jit.load(ckpt)
 
         model = model.cpu().eval()
-        x = torch.randn((1, 3, 256, 256), requires_grad=False)
+        x = torch.randn((1, 3, 64, 64), requires_grad=False)
         with Benchmark("[MaskNet][TorchScript][CPU]") as bm:
             bm(samples, lambda: model(x))
             self.benchmark["TorchScript"]["CPU"] = bm.fps
@@ -63,7 +63,7 @@ class MaskBenchmark:
 
     def onnx(self, samples: int = 200) -> None:
         self.benchmark["Onnx"] = {}
-        x = np.random.random((1, 3, 256, 256)).astype(np.float32)
+        x = np.random.random((1, 3, 64, 64)).astype(np.float32)
         
         ckpt = os.path.join(self.root, "masknet.nx")  
         sess = nx.InferenceSession(ckpt)
