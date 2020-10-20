@@ -26,11 +26,11 @@ class LabelBenchmark:
 
     def vanilla(self, samples: int) -> None:
         self.benchmark["Vanilla"] = {}
-        ckpt = os.path.join(self.root, "snook.pt")
+        ckpt = os.path.join(self.root, "labelnet.pt")
         conf = Config.from_yaml(self.config).model.labelnet
 
         model = LabelNet.from_config(conf)
-        model.load_state_dict(torch.load(ckpt, map_location="cpu")["labelnet"])
+        model.load_state_dict(torch.load(ckpt, map_location="cpu"))
 
         model = model.cpu().eval()
         x = torch.randn((1, 3, 32, 32), requires_grad=False)

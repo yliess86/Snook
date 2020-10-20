@@ -48,7 +48,7 @@ class LocSyntheticTrainer(Trainer):
             self.optim.zero_grad()
 
             _heatmap = self.model(render)
-            loss = self.loss(_heatmap, heatmap, mask)
+            loss = self.loss(_heatmap, heatmap, mask if self.mask else None)
 
             loss.backward()
             self.optim.step()
@@ -118,6 +118,7 @@ class LocSyntheticTrainer(Trainer):
             print(f"[LocNet][Trainer][Synthetic] Training Epoch {epoch_pbar}, mask={1 - mask:.2f}, spread={spread:.2f}")
             self.train_loader.dataset.spread = spread
             self.valid_loader.dataset.spread = spread
+            self.test_loader.dataset.spread  = spread
             self.train(mask)
             self.valid()
             if debug:

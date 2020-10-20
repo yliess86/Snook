@@ -54,18 +54,19 @@ class DataGenerator:
         self.pool.replace_glass("Glass", roughness=0.15)
         self.pool_corners = [EmptyObj("pool_corner", i) for i in range(4)]
 
-        w = self.generator_conf.pool_half_width
-        h = self.generator_conf.pool_half_height
-        z = self.generator_conf.pool_depth
-        self.pool_corners[0].position = np.array([-w,  h, z])
-        self.pool_corners[1].position = np.array([ w,  h, z])
-        self.pool_corners[2].position = np.array([ w, -h, z])
-        self.pool_corners[3].position = np.array([-w, -h, z])
+        w  = self.generator_conf.pool_half_width
+        h  = self.generator_conf.pool_half_height
+        z  = self.generator_conf.pool_depth
+        bw = self.generator_conf.pool_border_width
+        bh = self.generator_conf.pool_border_height
+        self.pool_corners[0].position = np.array([-w - bw,  h + bh, z])
+        self.pool_corners[1].position = np.array([ w + bw,  h + bh, z])
+        self.pool_corners[2].position = np.array([ w + bw, -h - bh, z])
+        self.pool_corners[3].position = np.array([-w - bw, -h - bh, z])
         
     def _setup_cues(self) -> None:
         self.cues = [FbxObj(self.resources_conf.cue, i) for i in range(6)]
         self.cues_target = [EmptyObj("cue_target", i) for i in range(6)]
-        self.cues_width = [EmptyObj("cue_width", i) for i in range(6)]
 
     def _setup_balls(self) -> None:
         self.balls = []
@@ -73,7 +74,6 @@ class DataGenerator:
         self.balls += [FbxObj(self.resources_conf.white_ball,  i) for i in range(6)]
         self.balls += [FbxObj(self.resources_conf.yellow_ball, i) for i in range(6)]
         self.balls += [FbxObj(self.resources_conf.red_ball,    i) for i in range(6)]
-        self.balls_width = [EmptyObj("ball_width", i) for i in range(len(self.balls))]
 
     def _setup_hdri(self) -> None:
         self.hdri = EnvironmentMaps()
@@ -110,16 +110,15 @@ class DataGenerator:
 
     def _sample_balls(self) -> None:
         self.samplers.pool.reset()
-        for ball, size in zip(self.balls, self.balls_width):
+        for ball in self.balls:
             ball.visible = np.random.rand() < self.generator_conf.ball_on_pool
             if ball.visible:
                 ball.position = self.samplers.pool.sample()
                 ball.position += np.array([0, 0, self.generator_conf.ball_radius])
-                size.position = ball.position + np.array([self.generator_conf.ball_radius, 0, 0])
                 ball.rotation = np.random.uniform(0, 2 * np.pi, (3, ))
 
     def _sample_cues(self) -> None:
-        for cue, cue_target, cue_width in zip(self.cues, self.cues_target, self.cues_width):
+        for cue, cue_target in zip(self.cues, self.cues_target):
             cue.visible = np.random.rand() < self.generator_conf.cue_is_visible
             if cue.visible:
                 balls = [ball for ball in self.balls if ball.visible]
@@ -135,6 +134,14 @@ class DataGenerator:
                     self.samplers.onion.radius_range = (radius, radius + self.generator_conf.cue_distance_max)
 
                 self.samplers.onion.pos = cue_target.position + np.array([0, 0, self.generator_conf.ball_radius])
+                ball_radius   = self.generator_conf.ball_radius
+                out_borders_w = np.abs(self.samplers.onion.pos[0]) > self.generator_conf.pool_half_width  - ball_radius
+                out_borders_h = np.abs(self.samplers.onion.pos[1]) > self.generator_conf.pool_half_height - ball_radius
+                if out_borders_w and out_borders_h:
+                    self.samplers.onion.pos += np.array([0, 0, ball_radius * 4])
+                if self.samplers.onion.pos[2] <= self.generator_conf.pool_depth:
+                    self.samplers.onion.pos[2] = self.generator_conf.pool_depth
+
                 cue.position = self.samplers.onion.sample()
 
                 in_pool_width = -self.generator_conf.pool_half_width < cue.position[0] < self.generator_conf.pool_half_width
@@ -143,7 +150,6 @@ class DataGenerator:
                     cue.position[2] += self.generator_conf.ball_radius * 4
                 
                 cue.look_at(cue_target, "-Z", "Y")
-                cue_width.position = cue.position + np.array([self.generator_conf.ball_radius, 0, 0])
 
     def _sample_cam(self) -> None:
         def sample_center(alpha: float) -> np.ndarray:
@@ -187,23 +193,24 @@ class DataGenerator:
                     return c
             return None
 
-        for ball, size in zip(self.balls, self.balls_width):
+        for ball in self.balls:
             if ball.visible:
                 position = self.cam.ndc(ball)
-                radius = int(l2_distance(position, self.cam.ndc(size)))
                 color = ball_color(ball)
-                self.pool_data.append_ball(position.tolist(), radius, color)
+                self.pool_data.append_ball(position.tolist(), color)
 
     def _register_cues(self) -> None:
-        for cue, target, size in zip(self.cues, self.cues_target, self.cues_width):
+        for cue, target in zip(self.cues, self.cues_target):
             if cue.visible:
-                position = self.cam.ndc(cue)
-                in_width = (position[0] >= 0) and (position[0] < self.render_conf.width)
-                in_height = (position[1] >=0) and (position[1] < self.render_conf.height)
-                if in_width and in_height:
-                    target_position = self.cam.ndc(target).tolist()
-                    radius = int(l2_distance(position, self.cam.ndc(size)))
-                    self.pool_data.append_cue(position.tolist(), target_position, radius)
+                in_pool_w = np.abs(cue.position[0]) <= self.generator_conf.pool_half_width  + self.generator_conf.pool_border_width
+                in_pool_h = np.abs(cue.position[1]) <= self.generator_conf.pool_half_height + self.generator_conf.pool_border_height
+                if in_pool_w and in_pool_h:
+                    position  = self.cam.ndc(cue)
+                    in_width  = (position[0] >= 0) and (position[0] < self.render_conf.width)
+                    in_height = (position[1] >= 0) and (position[1] < self.render_conf.height)
+                    if in_width and in_height:
+                        target_position = self.cam.ndc(target).tolist()
+                        self.pool_data.append_cue(position.tolist(), target_position)
 
     def _register_pool(self) -> None:
         self.pool_data.append_table(*[self.cam.ndc(corner).tolist() for corner in self.pool_corners])

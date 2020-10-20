@@ -1,5 +1,6 @@
 from argparse import ArgumentParser
 from argparse import RawTextHelpFormatter
+from snook.model.benchmark.dir import DirBenchmark
 from snook.model.benchmark.label import LabelBenchmark
 from snook.model.benchmark.loc import LocBenchmark
 from snook.model.benchmark.mask import MaskBenchmark
@@ -36,4 +37,7 @@ benchmark = MaskBenchmark(args.config, args.model)
 benchmark(args.samples)
 
 benchmark = LabelBenchmark(args.config, args.model)
+benchmark(args.samples)
+
+benchmark = DirBenchmark(args.config, args.model)
 benchmark(args.samples)

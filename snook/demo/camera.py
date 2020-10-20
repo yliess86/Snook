@@ -52,5 +52,5 @@ class Camera:
 
     def stop(self) -> None:
         self.started = False
-        self.cap.release()
         self.thread.join()
+        self.cap.release()

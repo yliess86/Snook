@@ -13,9 +13,9 @@ DATA_CONFIG=${DATA}/config.yaml
 DATA_TRAIN=${DATA}/dataset/train
 DATA_VALID=${DATA}/dataset/valid
 DATA_TEST=${DATA}/dataset/test
-DATA_TRAIN_SAMPLES=100_000
-DATA_VALID_SAMPLES=2_000
-DATA_TEST_SAMPLES=2_000
+DATA_TRAIN_SAMPLES=50_000
+DATA_VALID_SAMPLES=500
+DATA_TEST_SAMPLES=500
 
 # Model Files
 MODEL=./resources/model
@@ -37,9 +37,12 @@ vendor:
 	sh ${VENDOR_K210}
 
 # Generate Training Validation and Testing Dataset
-dataset:
+dataset: dataset_train dataset_valid dataset_test
+dataset_train:
 	PYTHONPATH=${PYTHONPATH} python3 -m snook.data.generate -c ${DATA_CONFIG} -r ${DATA_TRAIN}/render -d ${DATA_TRAIN}/data -s ${DATA_TRAIN_SAMPLES}
+dataset_valid:
 	PYTHONPATH=${PYTHONPATH} python3 -m snook.data.generate -c ${DATA_CONFIG} -r ${DATA_VALID}/render -d ${DATA_VALID}/data -s ${DATA_VALID_SAMPLES}
+dataset_test:
 	PYTHONPATH=${PYTHONPATH} python3 -m snook.data.generate -c ${DATA_CONFIG} -r ${DATA_TEST}/render  -d ${DATA_TEST}/data  -s ${DATA_TEST_SAMPLES}
 
 # Train Pytorch Model
@@ -52,12 +55,6 @@ convert:
 
 	./vendor/bin/ncc compile ${MODEL_LOCNET_ONNX} ${MODEL_LOCNET_KMODEL} -i onnx -o kmodel -t k210
 	./vendor/bin/ncc compile ${MODEL_LABELNET_ONNX} ${MODEL_LABELNET_KMODEL} -i onnx -o kmodel -t k210
-
-	# ./vendor/bin/ncc compile ${MODEL_LOCNET_ONNX} ${MODEL_LOCNET_KMODEL} -i onnx -o kmodel -t k210 \
-	# 	--inference-type uint8 --input-type uint8 \
-	# 	--dataset ${DATA_TEST}/render --dataset-format image \
-	# 	--input-std 1 --input-mean 0 --calibrate-method l2 \
-	# 	--dump-ir --dump-weights-range
 
 # Benchmark Python Models
 benchmark:

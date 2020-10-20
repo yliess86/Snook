@@ -9,40 +9,40 @@ from onnxruntime.quantization import quantize_dynamic
 from onnx.utils import polish_model
 from PIL import Image
 from snook.config import AttributeDict
-from snook.data.dataset.loc import LocDataset
+from snook.data.dataset.dir import DirDataset
 from snook.model.convert.base import Convertor
-from snook.model.network.loc import LocNet
+from snook.model.network.dir import DirNet
 from snook.model.network.modules import ConvBN2d
 from tabulate import tabulate
 from typing import Dict
 
 
-class LocNetConvertor(Convertor):
+class DirNetConvertor(Convertor):
     def __init__(self, model: AttributeDict, data: AttributeDict, root: str) -> None:
         self.outputs: Dict[str, np.ndarray] = {}
         self.root = root
         self.model_conf = model
 
-        print("[Loc][Convertor] Preparing Inputs")
-        render, *_ = LocDataset(data.dataset.test_render, data.dataset.test_data, spread=data.hyperparameters.spread.end, train=False)[0]
+        print("[Dir][Convertor] Preparing Inputs")
+        render, *_ = DirDataset(data.dataset.test_render, data.dataset.test_data, train=False)[0]
         self.torch_render = render.unsqueeze(0)
         self.numpy_render = self.torch_render.detach().cpu().numpy()
 
     def vanilla(self) -> None:
-        print("[Loc][Convertor][Vanilla] Loading Pretrained Model")
-        ckpt = os.path.join(self.root, "locnet.pt")
-        self.model = LocNet.from_config(self.model_conf)
+        print("[Dir][Convertor][Vanilla] Loading Pretrained Model")
+        ckpt = os.path.join(self.root, "dirnet.pt")
+        self.model = DirNet.from_config(self.model_conf)
         self.model.load_state_dict(torch.load(ckpt, map_location='cpu'))
         self.model.cpu().eval()
         self.model.fuse()
 
-        print("[Loc][Convertor][Vanilla] Computing Output")
+        print("[Dir][Convertor][Vanilla] Computing Output")
         with torch.no_grad():
             self.outputs["Vanilla"] = self.model(self.torch_render).cpu().numpy()
 
     def jit(self) -> None:
-        print("[Loc][Convertor][TorchScript] Converting Model")
-        ckpt = os.path.join(self.root, "locnet.ts")
+        print("[Dir][Convertor][TorchScript] Converting Model")
+        ckpt = os.path.join(self.root, "dirnet.ts")
         torch.jit.save(torch.jit.trace(self.model, self.torch_render), ckpt)
         
         model = torch.jit.load(ckpt)
@@ -50,11 +50,11 @@ class LocNetConvertor(Convertor):
             self.outputs["TorchScript"] = model(self.torch_render).cpu().numpy()
    
     def onnx(self, ops: int = 11) -> None:        
-        print("[Loc][Convertor][Onnx] Converting Model")
-        ckpt = os.path.join(self.root, "locnet.nx")
+        print("[Dir][Convertor][Onnx] Converting Model")
+        ckpt = os.path.join(self.root, "dirnet.nx")
         params   = [name for name, _ in self.model.named_parameters()]
-        dynamics = { "img" : { 0 : "batch_size" }, "heatmap" : { 0 : "batch_size" } }
-        in_outs  = { "input_names": ["img"] + params, "output_names": ["heatmap"], "dynamic_axes": dynamics }
+        dynamics = { "img" : { 0 : "batch_size" }, "dir" : { 0 : "batch_size" } }
+        in_outs  = { "input_names": ["img"] + params, "output_names": ["dir"], "dynamic_axes": dynamics }
         options  = { "export_params": True, "keep_initializers_as_inputs": True }
         tonnx.export(self.model, self.torch_render, ckpt, opset_version=ops, **in_outs, **options)
 
@@ -70,7 +70,7 @@ class LocNetConvertor(Convertor):
                 inputs.remove(name2inputs[initializer.name])
         nx.save(model, ckpt)
 
-        qckpt = os.path.join(self.root, "locnet.qnx")
+        qckpt = os.path.join(self.root, "dirnet.qnx")
         quantize_dynamic(ckpt, qckpt, per_channel=True)
 
         sess = nxruntime.InferenceSession(ckpt)
@@ -88,17 +88,8 @@ class LocNetConvertor(Convertor):
         backends = list(self.outputs.keys())
         data = ["Vanilla"] + [diff(self.outputs["Vanilla"], self.outputs[b]) for b in backends]
         table = tabulate([data], headers=["Backend"] + backends)
-        print("[Loc][Convertor] Max Absolute Backends Differences from Vanilla PyTorch\n")
+        print("[Dir][Convertor] Max Absolute Backends Differences from Vanilla PyTorch\n")
         print(table, "\n")
 
     def debug(self) -> None:
-        print("[Loc][Convertor] Debug Input/Output Visualization")
-        convert  = lambda x: np.repeat(x, 3, 0)
-        swap     = lambda x: np.swapaxes(np.swapaxes(x, 0, 1), 1, 2)
-        uint8    = lambda x: (np.clip(x, 0, 1) * 255.0).astype(np.uint8)
-        
-        render   = swap(self.numpy_render[0])
-        heatmaps = [swap(convert(heatmap)) for heatmap in self.outputs.values()]
-        
-        img = np.hstack([render] + heatmaps)
-        Image.fromarray(uint8(img)).show()
+        pass

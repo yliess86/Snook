@@ -30,9 +30,9 @@ class MaskNetConvertor(Convertor):
 
     def vanilla(self) -> None:
         print("[Mask][Convertor][Vanilla] Loading Pretrained Model")
-        ckpt = os.path.join(self.root, "snook.pt")
+        ckpt = os.path.join(self.root, "masknet.pt")
         self.model = MaskNet.from_config(self.model_conf)
-        self.model.load_state_dict(torch.load(ckpt, map_location='cpu')["masknet"])
+        self.model.load_state_dict(torch.load(ckpt, map_location='cpu'))
         self.model.cpu().eval()
         self.model.fuse()
 
@@ -53,8 +53,8 @@ class MaskNetConvertor(Convertor):
         print("[Mask][Convertor][Onnx] Converting Model")
         ckpt = os.path.join(self.root, "masknet.nx")
         params   = [name for name, _ in self.model.named_parameters()]
-        dynamics = { "img" : { 0 : "batch_size" }, "heatmaps" : { 0 : "batch_size" } }
-        in_outs  = { "input_names": ["img"] + params, "output_names": ["heatmaps"], "dynamic_axes": dynamics }
+        dynamics = { "img" : { 0 : "batch_size" }, "mask" : { 0 : "batch_size" } }
+        in_outs  = { "input_names": ["img"] + params, "output_names": ["mask"], "dynamic_axes": dynamics }
         options  = { "export_params": True, "keep_initializers_as_inputs": True }
         tonnx.export(self.model, self.torch_render, ckpt, opset_version=ops, **in_outs, **options)
 

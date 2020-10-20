@@ -6,6 +6,7 @@ import yaml
 from PIL import Image
 from PIL import ImageDraw
 from scipy.stats import multivariate_normal
+from snook.data.dataset.utils import RandomGaussianBlur
 from torch.utils.data import Dataset
 from torchvision import transforms
 from typing import Dict
@@ -21,6 +22,7 @@ class LocDataset(Dataset):
         if train:
             self.transforms = transforms.Compose([
                 transforms.ColorJitter(0.2, 0.2, 0.2, 0.2),
+                RandomGaussianBlur(3),
                 transforms.ToTensor(),
             ])
         else:
@@ -29,34 +31,28 @@ class LocDataset(Dataset):
     def __len__(self) -> int:
         return len(self.render)
 
-    def _build_heatmaps(self, data: Dict, img: Image) -> Tuple[np.ndarray, np.ndarray]:
-        mask = Image.new(mode='L', size=(img.width, img.height))
+    def _build_items(self, data: Dict, width: int, height: int) -> Tuple[np.ndarray, np.ndarray]:
+        mask = Image.new(mode='L', size=(width, height))
         draw = ImageDraw.Draw(mask)
         draw.polygon(tuple(tuple(corner) for corner in data["table"]), fill="white", outline=None)
-        mask = np.array(mask)
+        mask = np.array(mask) / 255.0
 
-        balls = np.zeros((img.height, img.width, 1))
+        heatmaps = []
         if "balls" in data and data["balls"] is not None:
-            balls = np.zeros((img.height, img.width, len(data["balls"])))
-            for b, ball in enumerate(data["balls"]):
-                grid = np.dstack(np.mgrid[0:img.width, 0:img.height])
-                gauss = multivariate_normal.pdf(grid, mean=tuple(ball["position"]), cov=ball["radius"] * self.spread).T
-                balls[..., b] = gauss / np.max(gauss)
-        balls = np.max(balls, axis=-1)
-
-        cues = np.zeros((img.height, img.width, 1))
+            for ball in data["balls"]:
+                grid = np.dstack(np.mgrid[0:width, 0:height])
+                gauss = multivariate_normal.pdf(grid, mean=ball["position"], cov=self.spread).T
+                heatmaps.append(gauss[..., None])
+        
         if "cues" in data and data["cues"] is not None:
-            cues = np.zeros((img.height, img.width, len(data["cues"])))
-            for c, cue in enumerate(data["cues"]):
-                grid = np.dstack(np.mgrid[0:img.width, 0:img.height])
-                gauss = multivariate_normal.pdf(grid, mean=tuple(cue["position"]), cov=cue["radius"] * self.spread).T
-                cues[..., c] = gauss / np.max(gauss)
-        cues = np.max(cues, axis=-1)
+            for cue in data["cues"]:
+                grid = np.dstack(np.mgrid[0:width, 0:height])
+                gauss = multivariate_normal.pdf(grid, mean=cue["position"], cov=self.spread).T
+                heatmaps.append(gauss[..., None])
 
-        heatmaps = np.zeros((img.height, img.width, 2))
-        heatmaps[:, :, 0] = balls
-        heatmaps[:, :, 1] = cues
-        heatmap = np.max(heatmaps, axis=-1)
+        heatmap = np.concatenate(heatmaps, axis=-1) if len(heatmaps) > 0 else np.zeros((height, width, 1), dtype=np.float32)
+        heatmap = heatmap.mean(axis=-1)
+        heatmap = heatmap / (heatmap.max() if heatmap.max() > 0 else 1.0)
 
         return mask, heatmap
 
@@ -66,9 +62,23 @@ class LocDataset(Dataset):
             data = yaml.load(f, Loader=yaml.FullLoader)
 
         render = self.transforms(img)
-        mask, heatmap = self._build_heatmaps(data, img)
+        mask, heatmap = self._build_items(data, img.width, img.height)
         
-        mask    = torch.tensor(mask / 255.0, dtype=torch.float32)
-        heatmap = torch.tensor(heatmap,      dtype=torch.float32)
+        mask    = torch.tensor(mask,    dtype=torch.float32)
+        heatmap = torch.tensor(heatmap, dtype=torch.float32)
 
         return render, mask, heatmap
+
+
+if __name__ == "__main__":
+    import matplotlib.pyplot as plt
+
+    spreads = [1000, 500, 250, 125, 75, 35, 10, 8]
+    dataset = LocDataset("resources/data/dataset/test/render", "resources/data/dataset/test/data", 0, False)
+    for i, s in enumerate(spreads):
+        dataset.spread = s
+        plt.subplot(1, len(spreads), i + 1)
+        plt.imshow(dataset[0][-1].detach().cpu().numpy())
+        plt.axis("off")
+    plt.tight_layout()
+    plt.show()

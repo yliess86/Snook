@@ -30,6 +30,10 @@ model:
     scale     : 0.4
     activation: ReLU
 
+  dirnet:
+    scale     : 0.4
+    activation: ReLU
+
 
 trainer:
   locnet:
@@ -43,14 +47,14 @@ trainer:
     hyperparameters:
       lr          : 1e-3
       weight_decay: 5e-4
-      epochs      : 20
-      batch_size  :  8
+      epochs      : 15
+      batch_size  : 32
       steps       :  4
       loss        : AdaptiveWingLoss
-      mask        : True
+      mask        : False
       spread:
-        start: 8.0
-        end  : 2.0
+        start: 1000
+        end  :    8
   
   masknet:
     dataset:
@@ -77,5 +81,19 @@ trainer:
     hyperparameters:
       lr          : 1e-3
       weight_decay: 5e-4
-      epochs      :  3
+      epochs      :  5
+      batch_size  : 64
+
+  dirnet:
+    dataset:
+      train_render: ./resources/data/dataset/train/render
+      train_data  : ./resources/data/dataset/train/data
+      valid_render: ./resources/data/dataset/valid/render
+      valid_data  : ./resources/data/dataset/valid/data
+      test_render : ./resources/data/dataset/test/render
+      test_data   : ./resources/data/dataset/test/data
+    hyperparameters:
+      lr          : 1e-3
+      weight_decay: 5e-4
+      epochs      : 10
       batch_size  : 64

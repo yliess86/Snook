@@ -1,6 +1,7 @@
 from argparse import ArgumentParser
 from argparse import RawTextHelpFormatter
 from snook.config import Config
+from snook.model.convert.dir import DirNetConvertor
 from snook.model.convert.label import LabelNetConvertor
 from snook.model.convert.loc import LocNetConvertor
 from snook.model.convert.mask import MaskNetConvertor
@@ -39,4 +40,7 @@ convertor = MaskNetConvertor(config.model.masknet, config.trainer.masknet, args.
 convertor(debug=args.debug)
 
 convertor = LabelNetConvertor(config.model.labelnet, config.trainer.labelnet, args.model)
+convertor()
+
+convertor = DirNetConvertor(config.model.dirnet, config.trainer.dirnet, args.model)
 convertor()

@@ -23,16 +23,16 @@ class LabelNetConvertor(Convertor):
         self.root = root
         self.model_conf = model
 
-        print("[Loc][Convertor] Preparing Inputs")
+        print("[Label][Convertor] Preparing Inputs")
         render, *_ = LabelDataset(data.dataset.test_render, data.dataset.test_data, train=False)[0]
         self.torch_render = render.unsqueeze(0)
         self.numpy_render = self.torch_render.detach().cpu().numpy()
 
     def vanilla(self) -> None:
         print("[Label][Convertor][Vanilla] Loading Pretrained Model")
-        ckpt = os.path.join(self.root, "snook.pt")
+        ckpt = os.path.join(self.root, "labelnet.pt")
         self.model = LabelNet.from_config(self.model_conf)
-        self.model.load_state_dict(torch.load(ckpt, map_location='cpu')["labelnet"])
+        self.model.load_state_dict(torch.load(ckpt, map_location='cpu'))
         self.model.cpu().eval()
         self.model.fuse()
 
@@ -53,8 +53,8 @@ class LabelNetConvertor(Convertor):
         print("[Label][Convertor][Onnx] Converting Model")
         ckpt = os.path.join(self.root, "labelnet.nx")
         params   = [name for name, _ in self.model.named_parameters()]
-        dynamics = { "img" : { 0 : "batch_size" }, "heatmaps" : { 0 : "batch_size" } }
-        in_outs  = { "input_names": ["img"] + params, "output_names": ["heatmaps"], "dynamic_axes": dynamics }
+        dynamics = { "img" : { 0 : "batch_size" }, "log_logits" : { 0 : "batch_size" } }
+        in_outs  = { "input_names": ["img"] + params, "output_names": ["log_logits"], "dynamic_axes": dynamics }
         options  = { "export_params": True, "keep_initializers_as_inputs": True }
         tonnx.export(self.model, self.torch_render, ckpt, opset_version=ops, **in_outs, **options)
 

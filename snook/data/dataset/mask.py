@@ -5,6 +5,7 @@ import yaml
 
 from PIL import Image
 from PIL import ImageDraw
+from snook.data.dataset.utils import RandomGaussianBlur
 from torch.utils.data import Dataset
 from torchvision import transforms
 from typing import Dict
@@ -19,6 +20,7 @@ class MaskDataset(Dataset):
             self.transforms = transforms.Compose([
                 transforms.Resize(64, interpolation=Image.NEAREST),
                 transforms.ColorJitter(0.2, 0.2, 0.2, 0.2),
+                RandomGaussianBlur(3),
                 transforms.ToTensor(),
                 transforms.RandomErasing(),
             ])

@@ -26,11 +26,11 @@ class LocBenchmark:
 
     def vanilla(self, samples: int) -> None:
         self.benchmark["Vanilla"] = {}
-        ckpt = os.path.join(self.root, "snook.pt")
+        ckpt = os.path.join(self.root, "locnet.pt")
         conf = Config.from_yaml(self.config).model.locnet
 
         model = LocNet.from_config(conf)
-        model.load_state_dict(torch.load(ckpt, map_location="cpu")["locnet"])
+        model.load_state_dict(torch.load(ckpt, map_location="cpu"))
 
         model = model.cpu().eval()
         x = torch.randn((1, 3, 256, 256), requires_grad=False)
