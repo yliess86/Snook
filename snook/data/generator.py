@@ -364,23 +364,29 @@ class Scene:
                     break
             balls.append((int(ball_coords.x), int(ball_coords.y), ball_color))
 
-        cues: List[Tuple[int, int]] = []
+        cues: List[Tuple[int, int, float, float]] = []
         for cue in self.cues:
             cue_coords = self.camera.ndc(cue.pos)
             if not in_view(cue_coords): continue
-            cues.append((int(cue_coords.x), int(cue_coords.y)))
+            cue_dir = cue.rot.to_quaternion() @ Vector((0.0, 0.0, -1.0))
+            cue_dir_a = self.camera.ndc(cue.pos)
+            cue_dir_b = self.camera.ndc(cue.pos + cue_dir * 10)
+            cue_dir = (cue_dir_b - cue_dir_a).normalized()
+            cues.append((
+                int(cue_coords.x), int(cue_coords.y), cue_dir.x, cue_dir.y,
+            ))
 
         with open(path, "w") as f:
-            f.write(f"[{len(balls)} balls] x y label\n")
+            f.write(f"[{len(balls)} balls] ndc_x ndc_y label\n")
             for x, y, c in balls:
                 f.write(f"{x} {y} {c}\n")
             f.write("\n")
 
-            f.write(f"[{len(cues)} cues] x y\n")
-            for x, y in cues:
-                f.write(f"{x} {y}\n")
+            f.write(f"[{len(cues)} cues] ndc_x ndc_y dir_x dir_y\n")
+            for x, y, dx, dy in cues:
+                f.write(f"{x} {y} {dx} {dy}\n")
             f.write("\n")
 
-            f.write(f"[{len(mask)} mask] x y\n")
+            f.write(f"[{len(mask)} mask] ndc_x ndc_y\n")
             for x, y in mask:
                 f.write(f"{x} {y}\n")
