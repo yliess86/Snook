@@ -189,7 +189,7 @@ class Cues(Sampler):
 
     def sample(self) -> None:
         sample = lambda: \
-            self.plane.sample if np.random.rand() < 0.5 \
+            self.plane.sample() if np.random.rand() < 0.5 \
             else self.balls[int(np.random.uniform(0, len(self.balls)))].pos
             
         positions = sample_plane_vectors(
