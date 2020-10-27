@@ -6,6 +6,7 @@ import numpy as np
 import os
 import snook.data.blender as blender
 import snook.data.generator as generator
+import snook.data.dataset as dataset
 
 
 def assert_vector_eq(a: Vector, b: Vector) -> bool:
@@ -217,3 +218,73 @@ class TestDataGenerator:
         scene.sample()
         scene.render(str(directory.join("test_scene.png")))
         scene.register(str(directory.join("test_scene.txt")))
+
+
+class TestDataDataset:
+    CONTENT = """[24 balls] ndc_x ndc_y label
+266 247 0
+270 182 0
+233 266 0
+242 105 0
+232 106 0
+203 123 0
+196 148 1
+299 192 1
+302 247 1
+299 424 1
+358 317 1
+274 148 1
+228 161 2
+260 127 2
+242 262 2
+199 135 2
+201 195 2
+237 299 2
+291 415 3
+402 346 3
+259 377 3
+213 165 3
+282 186 3
+256 256 3
+
+[6 cues] ndc_x ndc_y dir_x dir_y
+110 138 0.9902610182762146 0.13922305405139923
+334 357 -0.43943628668785095 0.8982738256454468
+273 112 0.1970456838607788 0.9803943037986755
+184 221 0.9992101192474365 -0.03973798826336861
+208 180 0.9951098561286926 0.09877397865056992
+256 256 -0.910141110420227 0.4142983555793762
+
+[4 mask] ndc_x ndc_y
+427 360
+246 56
+85 152
+266 456"""
+
+    def test_data_file_parser(self) -> None:
+        data = balls, cues, mask = dataset.parse_data_file(self.CONTENT)
+        assert len(balls) == 24
+        assert len(cues) == 6
+        assert len(mask) == 4
+
+    def test_create_mask(self) -> None:
+        mask = dataset.create_mask(
+            (8, 8), corners=[(0, 0), (2, 0), (2, 2), (0, 2)]
+        )
+        assert mask.shape == (8, 8)
+        assert np.all(mask[:3, :3] == 255) and np.all(mask[3:, 3:] == 0)
+
+    def test_create_gaussian(self) -> None:
+        gauss = dataset.create_gaussian((8, 8), point=(4, 4), spread=1.0)
+        gauss /= gauss.max()
+        assert gauss.shape == (8, 8)
+        assert gauss[4, 4] == 1.0
+        assert (gauss == 1.0).sum() == 1
+
+    def test_create_heatmap(self) -> None:
+        heatmap = dataset.create_heatmap(
+            (16, 16), points=((4, 4), (8, 8)), spread=1.0
+        )
+        assert heatmap.shape == (16, 16)
+        assert (heatmap[4, 4] == 1.0) and (heatmap[8, 8] == 1.0)
+        assert (heatmap == 1.0).sum() == 2
