@@ -1,4 +1,5 @@
 from mathutils import Euler, Vector
+from torch.utils.data import DataLoader
 
 import bpy
 import math
@@ -272,7 +273,7 @@ class TestDataDataset:
             (8, 8), corners=[(0, 0), (2, 0), (2, 2), (0, 2)]
         )
         assert mask.shape == (8, 8)
-        assert np.all(mask[:3, :3] == 255) and np.all(mask[3:, 3:] == 0)
+        assert np.all(mask[:3, :3] == 1.0) and np.all(mask[3:, 3:] == 0)
 
     def test_create_gaussian(self) -> None:
         gauss = dataset.create_gaussian((8, 8), point=(4, 4), spread=1.0)
@@ -288,3 +289,35 @@ class TestDataDataset:
         assert heatmap.shape == (16, 16)
         assert (heatmap[4, 4] == 1.0) and (heatmap[8, 8] == 1.0)
         assert (heatmap == 1.0).sum() == 2
+
+    def test_rehema_dataset(self, tmpdir) -> None:
+        blender.excomuniate_default_cube()
+
+        colors = generator.COLORS
+        balls = [f"./resources/fbx/ball_{color}.fbx" for color in colors]
+        cue = "./resources/fbx/cue.fbx"
+        pool = "./resources/fbx/pool.fbx"
+        hdri = "./resources/hdri"
+
+        scene = generator.Scene(
+            generator.cFiles(balls, cue, pool, hdri),
+            generator.cTable((2.07793, 1.03677), (0.25, 0.20), 1.70342),
+            generator.cDistances(0.1, 1.5, (10.0, 20.0)),
+        )
+
+        directory = tmpdir.mkdir("tmp")
+        renders = directory.mkdir("renders")
+        data = directory.mkdir("data")
+        for i in range(2):
+            scene.sample()
+            scene.render(str(renders.join(f"{i}.png")))
+            scene.register(str(data.join(f"{i}.txt")))
+
+        test_set = dataset.ReMaHeDataset(renders, data, spread=4.0)
+        assert len(test_set) == 2
+
+        loader = DataLoader(test_set, batch_size=2, shuffle=False)
+        for (render, mask, heatmap) in loader:
+            assert tuple(render.size()) == (2, 3, 512, 512)
+            assert tuple(mask.size()) == (2, 512, 512)
+            assert tuple(heatmap.size()) == (2, 512, 512)
