@@ -196,6 +196,11 @@ class Cues(Sampler):
             len(self), distance=1e-2, sample=self.plane.sample
         )
         for cue, target in zip(self.cues, positions):
+            limits = np.array(self.plane)
+            offset = np.clip(np.abs(np.array(target.xy)) / limits, 0, 1)
+            offset = (offset ** 10) * (self.balls.diameter * 2)
+            target.z += offset.mean()
+
             cue.visible = np.random.rand() < self.p
             cue.pos = sample_ehmisphere_vector(target, self.range)
             cue.look_at(target, "-Z", "Y")

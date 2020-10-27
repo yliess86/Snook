@@ -42,6 +42,7 @@ class Object:
     @visible.setter
     def visible(self, visible: bool) -> None:
         self.obj.hide_render = not visible
+        self.obj.hide_viewport = not visible
 
     def look_at(self, target: Vector, track: str, up: str) -> None:
         direction = (target - self.pos).normalized()
