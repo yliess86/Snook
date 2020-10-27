@@ -25,7 +25,7 @@ def sample_plane_vectors(
 ) -> List[Vector]:
     positions: List[Vector] = []
     for i in range(n):
-        while len(positions) < i:
+        while len(positions) < i + 1:
             pos = sample()
             for other in positions:
                 dist = np.abs(np.array(other - pos))
