@@ -359,6 +359,11 @@ class Scene:
             resolution = np.array(self.cycle.resolution)
             return np.all(xy > 0) and np.all(xy < resolution)
 
+        def in_table(pos: Vector) -> bool:
+            corner = np.array(self.mask)
+            _pos = np.abs(np.array(pos.xy))
+            return np.all(_pos < corner)
+
         balls: List[Tuple[int, int, int]] = []
         for ball in self.balls:
             if not ball.visible: continue
@@ -373,6 +378,7 @@ class Scene:
         cues: List[Tuple[int, int, float, float]] = []
         for cue in self.cues:
             if not cue.visible: continue
+            if not in_table(cue.pos): continue
             cue_coords = self.camera.ndc(cue.pos)
             if not in_view(cue_coords): continue
             cue_dir = cue.rot.to_quaternion() @ Vector((0.0, 0.0, -1.0))
