@@ -1,4 +1,5 @@
 import snook.model.network as network
+import snook.model.loss as loss
 import torch
 
 
@@ -33,3 +34,11 @@ class TestModelNetwork:
         y = autoenc(x)
 
         assert tuple(y.size()) == (2, 1, 256, 256)
+
+
+class TestModelLoss:
+    def test_adaptive_wing_loss(self) -> None:
+        awl = loss.AdaptiveWingLoss()
+
+        awl(torch.zeros((2, 4)), torch.zeros((2, 4)))
+        awl(torch.zeros((2, 4)), torch.zeros((2, 4)), mask=torch.zeros((2, 4)))
