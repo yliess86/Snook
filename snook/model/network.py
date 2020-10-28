@@ -1,10 +1,16 @@
-from typing import Tuple, Union
+from typing import List, NamedTuple, Tuple, Union
 
 import torch
 import torch.nn as nn
 
 
 EncoderProjection = Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]
+
+
+class Layer(NamedTuple):
+    inp: int
+    out: int
+    t: int
 
 
 class ConvBn2d(nn.Sequential):
@@ -153,3 +159,105 @@ class DecoderBlock(nn.Module):
         self, x: torch.Tensor, *, residual: torch.Tensor
     ) -> torch.Tensor:
         return self.block(self.transition(self.upsample(x) + residual))
+
+
+class AutoEncoder(nn.Module):
+    def __init__(
+        self,
+        layers: List[Layer],
+        scale: float = 1.0,
+        repeat: int = 2,
+        activation: nn.Module = nn.ReLU
+    ) -> None:
+        super(AutoEncoder, self).__init__()
+        scaled = lambda x: int(scale * x)
+        first, last = layers[0].inp, layers[-1].out
+
+        self.preprocess = nn.Sequential()
+        self.preprocess.add_module("convbn_1", ConvBn2d(
+            3, scaled(first), kernel_size=3, stride=2, padding=1, bias=False
+        ))
+        self.preprocess.add_module("activation_1", activation())
+        self.preprocess.add_module("convbn_2", ConvBn2d(
+            scaled(first), scaled(first), kernel_size=3, padding=1, bias=False
+        ))
+        self.preprocess.add_module("activation_2", activation())
+
+        self.encoders = nn.ModuleList([
+            EncoderBlock(
+                scaled(layer.inp),
+                scaled(layer.out),
+                t=layer.t,
+                repeat=repeat,
+                activation=activation,
+            )
+            for layer in layers
+        ])
+        self.bottleneck = EncoderBlock(
+            scaled(last),
+            scaled(last),
+            t=6,
+            repeat=repeat,
+            activation=activation,
+            projection=False,
+        )
+        self.decoders = nn.ModuleList([
+            DecoderBlock(
+                scaled(layer.out),
+                scaled(layer.inp),
+                t=layer.t,
+                repeat=repeat,
+                activation=activation,
+                scale=2,
+            )
+            for layer in layers[::-1]
+        ])
+
+        self.postprocess = nn.Sequential()
+        self.postprocess.add_module("upsample_1", nn.UpsamplingBilinear2d(
+            scale_factor=2
+        ))
+        self.postprocess.add_module("convbn_1", ConvBn2d(
+            scaled(first), scaled(first), kernel_size=3, padding=1, bias=False
+        ))
+        self.postprocess.add_module("activation_1", activation())
+        self.postprocess.add_module("upsample_2", nn.UpsamplingBilinear2d(
+            scale_factor=2
+        ))
+
+        self.out = nn.Conv2d(
+            scaled(first), 1, kernel_size=3, padding=1, bias=False
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        out = self.preprocess(x)
+        
+        skips = []
+        for encoder in self.encoders:
+            out, skip = encoder(out)
+            skips.append(skip)
+
+        out = self.bottleneck(out)
+
+        for i, decoder in enumerate(self.decoders):
+            skip = skips[len(skips) - i - 1]
+            out = decoder(out, residual=skip)
+
+        out = self.postprocess(out)
+        out = self.out(out).squeeze(1)
+
+        return out
+
+    def fuse(self) -> None:
+        for name, module in self.named_modules():
+            if type(module) == ConvBn2d:
+                fused_module = torch.quantization.fuse_modules(
+                    module, ["conv", "bn"], inplace=False
+                )[0]
+
+                names = name.split(".")
+                root = self
+                for name in names[:-1]:
+                    root = root.__getattr__(name)
+                
+                root.__setattr__(names[-1], fused_module)

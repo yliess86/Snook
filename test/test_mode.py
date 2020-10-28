@@ -22,3 +22,12 @@ class TestModelNetwork:
         y = dec(z, residual=res)
 
         assert tuple(y.size()) == (2, 1, 4, 4)
+
+    def test_autoencoder(self) -> None:
+        Layer = network.Layer
+        autoenc = network.AutoEncoder([Layer(4, 8, 1), Layer(8, 16, 6)])
+        
+        x = torch.zeros((2, 3, 256, 256))
+        y = autoenc(x)
+
+        assert tuple(y.size()) == (2, 256, 256)
