@@ -165,6 +165,8 @@ class AutoEncoder(nn.Module):
     def __init__(
         self,
         layers: List[Layer],
+        in_channels: int,
+        out_channels: int,
         scale: float = 1.0,
         repeat: int = 2,
         activation: nn.Module = nn.ReLU
@@ -175,7 +177,12 @@ class AutoEncoder(nn.Module):
 
         self.preprocess = nn.Sequential()
         self.preprocess.add_module("convbn_1", ConvBn2d(
-            3, scaled(first), kernel_size=3, stride=2, padding=1, bias=False
+            in_channels,
+            scaled(first),
+            kernel_size=3,
+            stride=2,
+            padding=1,
+            bias=False,
         ))
         self.preprocess.add_module("activation_1", activation())
         self.preprocess.add_module("convbn_2", ConvBn2d(
@@ -226,7 +233,7 @@ class AutoEncoder(nn.Module):
         ))
 
         self.out = nn.Conv2d(
-            scaled(first), 1, kernel_size=3, padding=1, bias=False
+            scaled(first), out_channels, kernel_size=3, padding=1, bias=False
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -244,7 +251,7 @@ class AutoEncoder(nn.Module):
             out = decoder(out, residual=skip)
 
         out = self.postprocess(out)
-        out = self.out(out).squeeze(1)
+        out = self.out(out)
 
         return out
 
