@@ -12,3 +12,13 @@ class TestModelNetwork:
         invres = network.InvertedResidual(1, 1)
         out = invres(torch.zeros((2, 1, 8, 8)))
         assert tuple(out.size()) == (2, 1, 8, 8)
+
+    def test_encoder_decoder(self) -> None:
+        enc = network.EncoderBlock(1, 1, t=1)
+        dec = network.DecoderBlock(1, 1, t=1, scale=1)
+
+        x = torch.zeros((2, 1, 8, 8))
+        z, res = enc(x)
+        y = dec(z, residual=res)
+
+        assert tuple(y.size()) == (2, 1, 4, 4)

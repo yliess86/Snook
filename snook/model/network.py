@@ -1,5 +1,10 @@
+from typing import Tuple, Union
+
 import torch
 import torch.nn as nn
+
+
+EncoderProjection = Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]
 
 
 class ConvBn2d(nn.Sequential):
@@ -66,3 +71,85 @@ class InvertedResidual(nn.Module):
         out = self.projection(self.depthwise(self.expension(x)))
         if self.residual: out += x
         return out
+
+
+class EncoderBlock(nn.Module):
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        *,
+        t: int,
+        repeat: int = 1,
+        activation: nn.Module = nn.ReLU,
+        projection: bool = True
+    ) -> None:
+        super(EncoderBlock, self).__init__()
+        self.transition = InvertedResidual(
+            in_channels,
+            out_channels,
+            stride=2,
+            t=t,
+            residual=False,
+            activation=activation
+        )
+        
+        self.block = nn.Sequential()
+        for i in range(repeat):
+            self.block.add_module(f"invres_{i}", InvertedResidual(
+                out_channels,
+                out_channels,
+                t=t,
+                residual=True,
+                activation=activation
+            ))
+
+        self.projection = ConvBn2d(
+            out_channels,
+            out_channels,
+            kernel_size=1,
+            bias=False
+        ) if projection else None
+
+    def forward(self, x: torch.Tensor) -> EncoderProjection:
+        out = self.block(self.transition(x))
+        if self.projection is not None: return out, self.projection(out)
+        return out
+
+
+class DecoderBlock(nn.Module):
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        *,
+        t: int,
+        repeat: int = 1,
+        activation: nn.Module = nn.ReLU,
+        scale: int = 2
+    ) -> None:
+        super(DecoderBlock, self).__init__()
+        self.upsample = nn.UpsamplingBilinear2d(scale_factor=scale)
+        self.transition = InvertedResidual(
+            in_channels,
+            out_channels,
+            stride=1,
+            t=t,
+            residual=False,
+            activation=activation
+        )
+
+        self.block = nn.Sequential()
+        for i in range(repeat):
+            self.block.add_module(f"invres_{i}", InvertedResidual(
+                out_channels,
+                out_channels,
+                t=t,
+                residual=True,
+                activation=activation
+            ))
+
+    def forward(
+        self, x: torch.Tensor, *, residual: torch.Tensor
+    ) -> torch.Tensor:
+        return self.block(self.transition(self.upsample(x) + residual))
