@@ -57,7 +57,7 @@ def create_heatmap(size: Size, *, points: Points, spread: float) -> np.ndarray:
         create_gaussian(size, point=p, spread=spread)[:, :, None]
         for p in points
     ], axis=-1).mean(axis=-1)
-    return heatmap / heatmap.max()
+    return (heatmap / heatmap.max()).T
 
 
 class ReMaHeDataset(Dataset):

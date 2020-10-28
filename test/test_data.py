@@ -290,7 +290,7 @@ class TestDataDataset:
         assert (heatmap[4, 4] == 1.0) and (heatmap[8, 8] == 1.0)
         assert (heatmap == 1.0).sum() == 2
 
-    def test_rehema_dataset(self, tmpdir) -> None:
+    def test_remahe_dataset(self, tmpdir) -> None:
         blender.excomuniate_default_cube()
 
         colors = generator.COLORS
