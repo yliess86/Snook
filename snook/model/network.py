@@ -46,7 +46,7 @@ class InvertedResidual(nn.Module):
         stride: int = 1,
         t: int = 6,
         residual: bool = True,
-        activation: nn.Module = nn.ReLU
+        activation: nn.Module = nn.ReLU, # type: ignore
     ) -> None:
         super(InvertedResidual, self).__init__()
         self.residual = residual
@@ -87,7 +87,7 @@ class EncoderBlock(nn.Module):
         *,
         t: int,
         repeat: int = 1,
-        activation: nn.Module = nn.ReLU,
+        activation: nn.Module = nn.ReLU, # type: ignore
         projection: bool = True
     ) -> None:
         super(EncoderBlock, self).__init__()
@@ -131,7 +131,7 @@ class DecoderBlock(nn.Module):
         *,
         t: int,
         repeat: int = 1,
-        activation: nn.Module = nn.ReLU,
+        activation: nn.Module = nn.ReLU, # type: ignore
         scale: int = 2
     ) -> None:
         super(DecoderBlock, self).__init__()
@@ -169,7 +169,7 @@ class AutoEncoder(nn.Module):
         out_channels: int,
         scale: float = 1.0,
         repeat: int = 2,
-        activation: nn.Module = nn.ReLU
+        activation: nn.Module = nn.ReLU, # type: ignore
     ) -> None:
         super(AutoEncoder, self).__init__()
         scaled = lambda x: int(scale * x)
@@ -265,6 +265,6 @@ class AutoEncoder(nn.Module):
                 names = name.split(".")
                 root = self
                 for name in names[:-1]:
-                    root = root.__getattr__(name)
+                    root = root.__getattr__(name) # type: ignore
                 
                 root.__setattr__(names[-1], fused_module)

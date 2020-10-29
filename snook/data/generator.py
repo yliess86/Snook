@@ -293,6 +293,8 @@ class Scene:
         sensor: cSensor = cSensor("HORIZONTAL", (36, 24), 85.0),
         render: cRender = cRender((512, 512), (64, 64), 64, False, True),
     ) -> None:
+        blender.excomuniate_default_cube()
+
         plane = Plane((
             table.plane[0] - 0.5 * distances.ball_d,
             table.plane[1] - 0.5 * distances.ball_d

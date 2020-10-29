@@ -1,9 +1,8 @@
 from abc import ABC, abstractmethod
-from mathutils import Euler, Vector
+from mathutils import Euler, Matrix, Vector
 from typing import Optional, Tuple
 
 import bpy
-import bpy_extras as bpye
 
 
 Size = Tuple[int, int]
@@ -14,6 +13,27 @@ def excomuniate_default_cube() -> None:
         bpy.data.objects.remove(obj)
 
 
+def world_to_camera_view(scene: "Scene", obj: "Object", pos: Vector) -> Vector:
+    local = Matrix(obj.matrix_world.normalized().inverted()) @ pos
+    z = -local.z
+
+    camera = obj.data
+    frame = [v for v in camera.view_frame(scene=scene)[:3]]
+    if camera.type != 'ORTHO':
+        if z == 0.0:
+            return Vector((0.5, 0.5, 0.0))
+        else:
+            frame = [-(v / (v.z / z)) for v in frame]
+
+    min_x, max_x = frame[2].x, frame[1].x
+    min_y, max_y = frame[1].y, frame[0].y
+
+    x = (local.x - min_x) / (max_x - min_x)
+    y = (local.y - min_y) / (max_y - min_y)
+
+    return Vector((x, y, z))
+
+
 class Object:
     def __init__(self, name: str) -> None:
         self.name = name
@@ -21,7 +41,7 @@ class Object:
 
     @property
     def pos(self) -> Vector:
-        return self.obj.location
+        return Vector(self.obj.location)
 
     @pos.setter
     def pos(self, pos: Vector) -> None:
@@ -29,7 +49,7 @@ class Object:
 
     @property
     def rot(self) -> Euler:
-        return self.obj.rotation_euler
+        return Euler(self.obj.rotation_euler)
 
     @rot.setter
     def rot(self, rot: Euler) -> None:
@@ -85,7 +105,7 @@ class Camera(Object):
 
     def ndc(self, pos: Vector) -> Vector:
         scene = bpy.context.scene
-        coords = bpye.object_utils.world_to_camera_view(scene, self.obj, pos)
+        coords = world_to_camera_view(scene, self.obj, pos)
 
         scale = scene.render.resolution_percentage / 100
         w = scene.render.resolution_x * scale
