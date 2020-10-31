@@ -23,5 +23,10 @@ Learn <i>Maths</i>, <i>RigidBody Physics</i>, and <i>More</i> Playing Pool.
 </p>
 
 <p align="center">
-    <img style="max-width: 324px;" alt="Logo" src="resources/snook_pool.png" />
+    <img style="max-width: 324px;" alt="Pool" src="resources/snook_pool.png" />
+</p>
+
+
+<p align="center">
+    <img style="max-width: 648px;" alt="SynthHeatmapTrain" src="resources/synthetic_heatmap_train.gif" />
 </p>
