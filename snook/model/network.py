@@ -268,3 +268,32 @@ class AutoEncoder(nn.Module):
                     root = root.__getattr__(name) # type: ignore
                 
                 root.__setattr__(names[-1], fused_module)
+
+
+class Classifier(nn.Module):
+    def __init__(
+        self,
+        layers: List[Layer],
+        *,
+        hidden: int,
+        n_class: int,
+        activation: nn.Module = nn.ReLU, # type: ignore
+    ) -> None:
+        super(Classifier, self).__init__()
+        self.features = nn.Sequential(*(
+            nn.Sequential(
+                ConvBn2d(layer.inp, layer.out, kernel_size=layer.t, stride=2),
+                activation(),
+            )
+            for layer in layers
+        ))
+
+        self.classifier = nn.Sequential(
+            nn.Conv2d(layers[-1].out, hidden, kernel_size=1),
+            nn.Dropout(),
+            activation(),
+            nn.Conv2d(hidden, n_class, kernel_size=1),
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.classifier(self.features(x)).view((x.size(0), -1))

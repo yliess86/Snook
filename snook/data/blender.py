@@ -13,7 +13,11 @@ def excomuniate_default_cube() -> None:
         bpy.data.objects.remove(obj)
 
 
-def world_to_camera_view(scene: "Scene", obj: "Object", pos: Vector) -> Vector:
+def world_to_camera_view(
+    scene: bpy.types.Scene,
+    obj: bpy.types.Object,
+    pos: Vector
+ ) -> Vector:
     local = Matrix(obj.matrix_world.normalized().inverted()) @ pos
     z = -local.z
 

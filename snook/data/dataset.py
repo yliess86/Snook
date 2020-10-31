@@ -1,8 +1,9 @@
 from PIL import Image, ImageDraw
 from scipy.stats import multivariate_normal
+from snook.data.generator import COLORS
 from torch.utils.data import Dataset
 from torchvision.transforms import Compose, ToTensor
-from typing import List, Tuple
+from typing import List, NamedTuple, Sequence, Tuple
 
 import os
 import numpy as np
@@ -18,6 +19,7 @@ Size = Tuple[int, int]
 Point = Tuple[int, int]
 Points = List[Point]
 ReMaHe = Tuple[torch.Tensor, torch.Tensor,torch.Tensor]
+Cl = Tuple[torch.Tensor, int]
 
 
 def parse_data_file(content: str) -> DataFileContent:
@@ -102,3 +104,58 @@ class ReMaHeDataset(Dataset):
             torch.from_numpy(mask),
             torch.from_numpy(heatmap),
         )
+
+
+class ClSample(NamedTuple):
+    path: str
+    pos: Tuple[int, int]
+    label: int
+
+
+class ClDataset(Dataset):
+    def __init__(self,
+        renders: str,
+        data: str,
+        *,
+        window: int = 64,
+        train: bool = False,
+    ) -> None:
+        _renders = [
+            os.path.join(renders, f) 
+            for f in sorted(os.listdir(renders))
+            if f.endswith(".png")
+        ]
+        _data = [
+            os.path.join(data, f) 
+            for f in sorted(os.listdir(data))
+            if f.endswith(".txt")
+        ]
+        assert len(renders) == len(data)
+
+        self.window = window
+        self.transforms = Compose([ToTensor()])
+        
+        self.data: Sequence[ClSample] = []
+        for render, datum in zip(_renders, _data):
+            with open(datum, "r") as f:
+                balls, cues, _ = parse_data_file(f.read())
+            self.data += [
+                ClSample(render, ball[:2], ball[-1]) for ball in balls
+            ]
+            self.data += [
+                ClSample(render, cue[:2], len(COLORS)) for cue in cues
+            ]
+
+    def __len__(self) -> int:
+        return len(self.data)
+
+    def __getitem__(self, idx: int) -> Cl:
+        path, (x, y), label = self.data[idx]
+        
+        render = Image.open(path).convert("RGB")
+        render = self.transforms(render)
+
+        offset = self.window // 2
+        window = render[:, y - offset:y + offset, x - offset:x + offset]
+
+        return window, label

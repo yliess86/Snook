@@ -290,7 +290,7 @@ class TestDataDataset:
         assert (heatmap[4, 4] == 1.0) and (heatmap[8, 8] == 1.0)
         assert (heatmap == 1.0).sum() == 2
 
-    def test_remahe_dataset(self, tmpdir) -> None:
+    def test_datasets(self, tmpdir) -> None:
         blender.excomuniate_default_cube()
 
         colors = generator.COLORS
@@ -321,3 +321,11 @@ class TestDataDataset:
             assert tuple(render.size()) == (2, 3, 512, 512)
             assert tuple(mask.size()) == (2, 512, 512)
             assert tuple(heatmap.size()) == (2, 512, 512)
+
+        test_set = dataset.ClDataset(renders, data, window=64)
+        assert len(test_set) == 2
+
+        loader = DataLoader(test_set, batch_size=2, shuffle=False)
+        for (window, label) in loader:
+            assert tuple(window.size()) == (2, 3, 64, 64)
+            assert tuple(label.size()) == (2, 1)

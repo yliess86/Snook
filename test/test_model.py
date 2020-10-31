@@ -27,13 +27,26 @@ class TestModelNetwork:
     def test_autoencoder(self) -> None:
         Layer = network.Layer
         autoenc = network.AutoEncoder(
-            [Layer(4, 8, 1), Layer(8, 16, 6)], 3, 1
+            [Layer(4, 8, 1), Layer(8, 16, 6)], 3, 1,
         )
         
         x = torch.zeros((2, 3, 256, 256))
         y = autoenc(x)
 
         assert tuple(y.size()) == (2, 1, 256, 256)
+
+    def test_classifier(self) -> None:
+        Layer = network.Layer
+        classif = network.Classifier(
+            [Layer(3, 8, 3), Layer(8, 16, 3)],
+            hidden=256,
+            n_class=5,
+        )
+
+        x = torch.zeros((2, 3, 8, 8))
+        y = classif(x)
+
+        assert tuple(y.size())
 
 
 class TestModelLoss:
