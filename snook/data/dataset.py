@@ -130,7 +130,7 @@ class ClDataset(Dataset):
             for f in sorted(os.listdir(data))
             if f.endswith(".txt")
         ]
-        assert len(renders) == len(data)
+        assert len(_renders) == len(_data)
 
         self.window = window
         self.transforms = Compose([ToTensor()])
