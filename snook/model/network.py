@@ -277,22 +277,30 @@ class Classifier(nn.Module):
         *,
         hidden: int,
         n_class: int,
+        scale: float = 1.0,
         activation: nn.Module = nn.ReLU, # type: ignore
     ) -> None:
         super(Classifier, self).__init__()
+        scaled = lambda x: int(scale * x)
+
         self.features = nn.Sequential(*(
             nn.Sequential(
-                ConvBn2d(layer.inp, layer.out, kernel_size=layer.t, stride=2),
+                ConvBn2d(
+                    scaled(layer.inp) if i > 0 else layer.inp,
+                    scaled(layer.out),
+                    kernel_size=layer.t,
+                    stride=2
+                ),
                 activation(),
             )
-            for layer in layers
+            for i, layer in enumerate(layers)
         ))
 
         self.classifier = nn.Sequential(
-            nn.Conv2d(layers[-1].out, hidden, kernel_size=1),
+            nn.Conv2d(scaled(layers[-1].out), scaled(hidden), kernel_size=1),
             nn.Dropout(),
             activation(),
-            nn.Conv2d(hidden, n_class, kernel_size=1),
+            nn.Conv2d(scaled(hidden), n_class, kernel_size=1),
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:

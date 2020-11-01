@@ -156,6 +156,9 @@ class ClDataset(Dataset):
         render = self.transforms(render)
 
         offset = self.window // 2
-        window = render[:, y - offset:y + offset, x - offset:x + offset]
+        view = render[:, y - offset:y + offset, x - offset:x + offset]
+
+        window = torch.zeros((3, self.window, self.window), dtype=torch.float)
+        window[:, :view.size(1), :view.size(2)] = view
 
         return window, label
