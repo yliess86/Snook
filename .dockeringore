@@ -139,7 +139,3 @@ cython_debug/
 
 # Vscode settings
 .vscode/
-
-# Resources and Dataset
-resources/hdri/
-notebooks/dataset/
