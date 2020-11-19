@@ -369,6 +369,7 @@ class Scene:
         balls: List[Tuple[int, int, int]] = []
         for ball in self.balls:
             if not ball.visible: continue
+            if ball.occluded(self.camera, self.balls.diameter): continue
             ball_coords = self.camera.ndc(ball.pos)
             if not in_view(ball_coords): continue
             for color in COLORS:
@@ -381,6 +382,7 @@ class Scene:
         for cue in self.cues:
             if not cue.visible: continue
             if not in_table(cue.pos): continue
+            if cue.occluded(self.camera, self.balls.diameter): continue
             cue_coords = self.camera.ndc(cue.pos)
             if not in_view(cue_coords): continue
             cue_dir = cue.rot.to_quaternion() @ Vector((0.0, 0.0, -1.0))

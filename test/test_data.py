@@ -88,22 +88,18 @@ class TestDataBlender:
         assert_vector_eq(coords, Vector((960.0, 540.0, 0.0)))
 
         occlusion_obj = blender.Object("ball_white_1")
+        obj.pos = Vector((0, 0, 0))
+        cam.pos = Vector((0, 2, 0))
+        cam.look_at(obj.pos, "-Z", "Y")
         
-        def test_occlusion_success():
-            obj.pos = Vector((0, -0.5, 0))
-            occlusion_obj.pos = Vector((0, 0.5, 0))
-            cam.pos = Vector((0, 2, 0))
-            assert obj.occluded(cam)
+        for pos in [(0, 0.5, 0), (0, 1.0, 0), (0, 1.5, 0)]:
+            occlusion_obj.pos = Vector(pos)
+            assert obj.occluded(cam, offset=0.1)
 
-        def test_occlusion_fail():
-            obj.pos = Vector((0, 0.5, 0))
-            occlusion_obj.pos = Vector((0, -0.5, 0))
-            cam.pos = Vector((0, 2, 0))
-            assert not obj.occluded(cam)
-
-        test_occlusion_success()
-        test_occlusion_fail()
-
+        for pos in [(0, -0.5, 0), (0.5, 0, 0), (0, 0, 0.5)]:
+            occlusion_obj.pos = Vector(pos)
+            assert not obj.occluded(cam, offset=0.1)
+        
     def test_hdri(self) -> None:
         root = "./resources/hdri"
         files = os.listdir(root)

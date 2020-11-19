@@ -55,6 +55,9 @@ def create_gaussian(size: Size, *, point: Point, spread: float) -> np.ndarray:
 
 
 def create_heatmap(size: Size, *, points: Points, spread: float) -> np.ndarray:
+    if len(points) <= 0:
+        return np.zeros(size)
+        
     heatmap = np.concatenate([
         create_gaussian(size, point=p, spread=spread)[:, :, None]
         for p in points
