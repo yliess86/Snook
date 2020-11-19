@@ -87,6 +87,23 @@ class TestDataBlender:
         coords = cam.ndc(obj.pos)
         assert_vector_eq(coords, Vector((960.0, 540.0, 0.0)))
 
+        occlusion_obj = blender.Object("ball_white_1")
+        
+        def test_occlusion_success():
+            obj.pos = Vector((0, -0.5, 0))
+            occlusion_obj.pos = Vector((0, 0.5, 0))
+            cam.pos = Vector((0, 2, 0))
+            assert obj.occluded(cam)
+
+        def test_occlusion_fail():
+            obj.pos = Vector((0, 0.5, 0))
+            occlusion_obj.pos = Vector((0, -0.5, 0))
+            cam.pos = Vector((0, 2, 0))
+            assert not obj.occluded(cam)
+
+        test_occlusion_success()
+        test_occlusion_fail()
+
     def test_hdri(self) -> None:
         root = "./resources/hdri"
         files = os.listdir(root)
@@ -123,7 +140,6 @@ class TestDataBlender:
         cycle.denoise = False
         assert scene.cycles.device == "GPU"
         assert not scene.cycles.use_denoising
-
 
         cycle.render(str(tmpdir.mkdir("tmp").join("test_cycle.png")))
 

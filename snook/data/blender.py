@@ -68,6 +68,17 @@ class Object:
         self.obj.hide_render = not visible
         self.obj.hide_viewport = not visible
 
+    def occluded(self, camera: "Camera") -> bool:
+        world = self.obj.matrix_world
+        world_inv = world.inverted()
+
+        origin = world_inv @ self.pos
+        target = world_inv @ camera.pos
+        direction = (target - origin).normalized()
+
+        hit, *_ = self.obj.ray_cast(origin, direction)
+        return hit
+
     def look_at(self, target: Vector, track: str, up: str) -> None:
         direction = (target - self.pos).normalized()
         self.rot = direction.to_track_quat(track, up).to_euler()
