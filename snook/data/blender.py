@@ -3,6 +3,7 @@ from mathutils import Euler, Matrix, Vector
 from typing import Optional, Tuple
 
 import bpy
+import numpy as np
 
 
 Size = Tuple[int, int]
@@ -68,23 +69,25 @@ class Object:
         self.obj.hide_render = not visible
         self.obj.hide_viewport = not visible
 
-    def occluded(self, camera: "Camera", offset: float = 0) -> bool:
+    def occluded(
+        self, camera: "Camera", distance: float = 0, samples: int = 25,
+    ) -> bool:
         depsgraph = bpy.context.evaluated_depsgraph_get()
         
-        def _occluded(origin_offset: Vector) -> bool:
-            origin = self.pos + origin_offset
+        def _occluded(offset: Vector) -> bool:
             direction = (camera.pos - self.pos).normalized()
-            origin += direction * offset
+            origin = self.pos + direction * distance + offset
+            direction = (camera.pos - origin).normalized()
             hit, *_ = bpy.context.scene.ray_cast(depsgraph, origin, direction)
             return hit
-
-        return (
-            _occluded(Vector((      0, 0,       0))) or
-            _occluded(Vector(( offset, 0,       0))) or
-            _occluded(Vector((-offset, 0,       0))) or
-            _occluded(Vector((      0, 0,  offset))) or
-            _occluded(Vector((      0, 0, -offset)))
-        )
+        
+        dists = np.sqrt(np.random.uniform(0, distance / 2, size=samples))
+        angles = np.pi * np.random.uniform(0, 2, size=samples)
+        xs, ys = dists * np.cos(angles), dists * np.sin(angles)
+        for x, y in zip(xs, ys):
+            if _occluded(Vector((x, y, 0))):
+                return True
+        return False
 
     def look_at(self, target: Vector, track: str, up: str) -> None:
         direction = (target - self.pos).normalized()

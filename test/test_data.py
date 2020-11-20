@@ -89,16 +89,16 @@ class TestDataBlender:
 
         occlusion_obj = blender.Object("ball_white_1")
         obj.pos = Vector((0, 0, 0))
-        cam.pos = Vector((0, 2, 0))
+        cam.pos = Vector((0, 0, 2))
         cam.look_at(obj.pos, "-Z", "Y")
         
-        for pos in [(0, 0.5, 0), (0, 1.0, 0), (0, 1.5, 0)]:
+        for pos in [(0, 0, 0.5), (0, 0, 1.0), (0, 0, 1.5)]:
             occlusion_obj.pos = Vector(pos)
-            assert obj.occluded(cam, offset=0.1)
+            assert obj.occluded(cam, distance=0.1)
 
-        for pos in [(0, -0.5, 0), (0.5, 0, 0), (0, 0, 0.5)]:
+        for pos in [(0, -0.5, 0), (0.5, 0, 0), (0, 0, -0.5)]:
             occlusion_obj.pos = Vector(pos)
-            assert not obj.occluded(cam, offset=0.1)
+            assert not obj.occluded(cam, distance=0.1)
         
     def test_hdri(self) -> None:
         root = "./resources/hdri"
