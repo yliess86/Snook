@@ -68,18 +68,23 @@ class Object:
         self.obj.hide_render = not visible
         self.obj.hide_viewport = not visible
 
-    def occluded(self, camera: "Camera", offset: Vector = None) -> bool:
-        origin = self.pos
-        direction = (camera.pos - self.pos).normalized()
-        if offset is not None:
+    def occluded(self, camera: "Camera", offset: float = 0) -> bool:
+        depsgraph = bpy.context.evaluated_depsgraph_get()
+        
+        def _occluded(origin_offset: Vector) -> bool:
+            origin = self.pos + origin_offset
+            direction = (camera.pos - self.pos).normalized()
             origin += direction * offset
+            hit, *_ = bpy.context.scene.ray_cast(depsgraph, origin, direction)
+            return hit
 
-        hit, loc, norm, dist, obj, mat = bpy.context.scene.ray_cast(
-            bpy.context.evaluated_depsgraph_get(),
-            origin=origin, direction=direction,
+        return (
+            _occluded(Vector((      0, 0,       0))) or
+            _occluded(Vector(( offset, 0,       0))) or
+            _occluded(Vector((-offset, 0,       0))) or
+            _occluded(Vector((      0, 0,  offset))) or
+            _occluded(Vector((      0, 0, -offset)))
         )
-
-        return hit
 
     def look_at(self, target: Vector, track: str, up: str) -> None:
         direction = (target - self.pos).normalized()
