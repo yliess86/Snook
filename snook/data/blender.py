@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from mathutils import Euler, Matrix, Vector
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple
 
 import bpy
 import numpy as np
@@ -70,18 +70,25 @@ class Object:
         self.obj.hide_viewport = not visible
 
     def occluded(
-        self, camera: "Camera", distance: float = 0, samples: int = 25,
+        self,
+        camera: "Camera",
+        distance: float = 0,
+        samples: int = 25,
+        exclude: List[str] = [],
     ) -> bool:
         depsgraph = bpy.context.evaluated_depsgraph_get()
+        exclude.append(self.name)
         
         def _occluded(offset: Vector) -> bool:
-            direction = (camera.pos - self.pos).normalized()
-            origin = self.pos + direction * distance + offset
+            origin = self.pos + Vector((0, 0, 1)) * distance + offset
             direction = (camera.pos - origin).normalized()
-            hit, *_ = bpy.context.scene.ray_cast(depsgraph, origin, direction)
-            return hit
+            limit = (camera.pos - origin).length
+            hit, *_, obj, _ = bpy.context.scene.ray_cast(
+                depsgraph, origin, direction, distance=limit,
+            )
+            return (obj.name not in exclude) if hit else hit
         
-        dists = np.sqrt(np.random.uniform(0, distance / 2, size=samples))
+        dists = np.sqrt(np.random.uniform(0, distance, size=samples))
         angles = np.pi * np.random.uniform(0, 2, size=samples)
         xs, ys = dists * np.cos(angles), dists * np.sin(angles)
         for x, y in zip(xs, ys):

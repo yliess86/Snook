@@ -168,7 +168,7 @@ class TestDataGenerator:
         balls = generator.Balls(
             [f"./resources/fbx/ball_{color}.fbx" for color in colors],
             plane=plane,
-            diameter=0.01,
+            diameter=0.1047,
             p=0.5,
             n=n,
         )
@@ -182,6 +182,7 @@ class TestDataGenerator:
 
         cues = generator.Cues(
             "./resources/fbx/cue.fbx",
+            diameter=0.154,
             balls=balls,
             plane=plane,
             distance=2.0,
