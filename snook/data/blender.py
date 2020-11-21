@@ -81,7 +81,6 @@ class Object:
         exclude.append(self.name)
         
         def _occluded(offset: Vector) -> bool:
-            print(radius)
             origin = self.pos + Vector((0, 0, 1)) * radius + offset
             direction = (camera.pos - origin).normalized()
             limit = (camera.pos - origin).length
@@ -96,7 +95,6 @@ class Object:
         p_occluded = np.mean([
             int(_occluded(Vector((x, y, 0)))) for x, y in zip(xs, ys)
         ])
-        print(f"Occluded: {p_occluded * 100:.2f}%")
         return p_occluded > thresh
 
     def look_at(self, target: Vector, track: str, up: str) -> None:

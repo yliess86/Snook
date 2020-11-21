@@ -108,3 +108,39 @@ def plot_acc_history(train: List[float], valid: List[float]) -> None:
 
     fig.canvas.draw()
     plt.show()
+
+
+def plot_inference(
+    render: torch.Tensor,
+    heatmap: torch.Tensor,
+    peaks: torch.Tensor,
+    labels: torch.Tensor,
+) -> None:
+    fig = plt.figure(figsize=(3 * 4, 4), facecolor="white")
+    ax1, ax2, ax3 = [fig.add_subplot(1, 3, i + 1) for i in range(3)]
+
+    render = render.detach().cpu().permute((1, 2, 0)).numpy()
+    ax1.imshow(render)
+    ax1.set_axis_off()
+    ax1.title.set_text("Render")
+
+    heatmap = heatmap.detach().cpu().numpy()
+    ax2.imshow(heatmap)
+    ax2.set_axis_off()
+    ax2.title.set_text("Heatmap")
+
+    ax3.imshow(render, alpha=0.5)
+    ax3.set_axis_off()
+    ax3.title.set_text("Snook")
+    for (x, y), label in zip(peaks, labels):
+        ax3.add_artist(plt.Circle(
+            (y, x),
+            radius=12,
+            fill=False,
+            linewidth=2,
+            edgecolor=["k", "w", "y", "r", "b"][label]
+        ))
+
+    fig.subplots_adjust(hspace=0.25, wspace=0.25)
+    fig.canvas.draw()
+    plt.show()
