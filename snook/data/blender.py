@@ -72,15 +72,17 @@ class Object:
     def occluded(
         self,
         camera: "Camera",
-        distance: float = 0,
-        samples: int = 25,
+        radius: float = 0,
+        samples: int = 50,
         exclude: List[str] = [],
+        thresh: float = 0.5,
     ) -> bool:
         depsgraph = bpy.context.evaluated_depsgraph_get()
         exclude.append(self.name)
         
         def _occluded(offset: Vector) -> bool:
-            origin = self.pos + Vector((0, 0, 1)) * distance + offset
+            print(radius)
+            origin = self.pos + Vector((0, 0, 1)) * radius + offset
             direction = (camera.pos - origin).normalized()
             limit = (camera.pos - origin).length
             hit, *_, obj, _ = bpy.context.scene.ray_cast(
@@ -88,13 +90,14 @@ class Object:
             )
             return (obj.name not in exclude) if hit else hit
         
-        dists = np.sqrt(np.random.uniform(0, distance, size=samples))
-        angles = np.pi * np.random.uniform(0, 2, size=samples)
-        xs, ys = dists * np.cos(angles), dists * np.sin(angles)
-        for x, y in zip(xs, ys):
-            if _occluded(Vector((x, y, 0))):
-                return True
-        return False
+        angles = np.random.rand(samples) * 2 * np.pi
+        distances = radius * np.sqrt(np.random.rand(samples))
+        xs, ys = distances * np.cos(angles), distances * np.sin(angles)
+        p_occluded = np.mean([
+            int(_occluded(Vector((x, y, 0)))) for x, y in zip(xs, ys)
+        ])
+        print(f"Occluded: {p_occluded * 100:.2f}%")
+        return p_occluded > thresh
 
     def look_at(self, target: Vector, track: str, up: str) -> None:
         direction = (target - self.pos).normalized()

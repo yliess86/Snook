@@ -28,7 +28,7 @@ def sample_plane_vectors(
         while len(positions) < i + 1:
             pos = sample()
             for other in positions:
-                dist = np.abs(np.array(other - pos))
+                dist = np.sqrt(np.array(other - pos) ** 2)
                 if np.all(dist < distance): continue
             positions.append(pos)
     return positions
@@ -127,7 +127,7 @@ class Balls(Sampler):
     ) -> None:
         r = 0.5 * diameter
         self.fbxs = fbxs
-        self.plane = Plane((plane[0] - r, plane[1] - r), plane.height)
+        self.plane = Plane((plane[0] - r, plane[1] - r), plane.height + r)
         self.diameter = diameter
         self.p = p
         self.n = n
@@ -151,7 +151,7 @@ class Balls(Sampler):
         )
         for ball, pos in zip(self.balls, positions):
             ball.visible = np.random.rand() < self.p
-            ball.pos = pos + Vector((0.0, 0.0, 0.5 * self.diameter))
+            ball.pos = pos
             ball.rot = Euler(tuple(np.random.uniform(
                 math.radians(0), math.radians(360), size=3
             )))
@@ -374,7 +374,9 @@ class Scene:
         for ball in self.balls:
             if not ball.visible: continue
             if ball.occluded(
-                self.camera, 0.2 * self.balls.diameter, exclude=["pool_0"],
+                self.camera, 0.5 * self.balls.diameter, exclude=[
+                    "pool_0", *("ball_{i}" for i in range(len(self.balls))),
+                ],
             ): continue
             ball_coords = self.camera.ndc(ball.pos)
             if not in_view(ball_coords): continue
@@ -389,7 +391,9 @@ class Scene:
             if not cue.visible: continue
             if not in_table(cue.pos): continue
             if cue.occluded(
-                self.camera, 0.2 * self.cues.diameter, exclude=["pool_0"],
+                self.camera, 0.5 * self.cues.diameter, exclude=[
+                    "pool_0", *("cue_{i}" for i in range(len(self.cues))),
+                ],
             ): continue
             cue_coords = self.camera.ndc(cue.pos)
             if not in_view(cue_coords): continue

@@ -94,11 +94,13 @@ class TestDataBlender:
         
         for pos in [(0, 0, 0.5), (0, 0, 1.0), (0, 0, 1.5)]:
             occlusion_obj.pos = Vector(pos)
-            assert obj.occluded(cam, distance=0.1)
+            print(pos)
+            assert obj.occluded(cam, radius=0.1047 * 0.5)
 
         for pos in [(0, -0.5, 0), (0.5, 0, 0), (0, 0, -0.5)]:
             occlusion_obj.pos = Vector(pos)
-            assert not obj.occluded(cam, distance=0.1)
+            print(pos)
+            assert not obj.occluded(cam, radius=0.1047 * 0.5)
         
     def test_hdri(self) -> None:
         root = "./resources/hdri"
@@ -225,7 +227,7 @@ class TestDataGenerator:
         scene = generator.Scene(
             generator.cFiles(balls, cue, pool, hdri),
             generator.cTable((2.07793, 1.03677), (0.25, 0.20), 1.70342),
-            generator.cDistances(0.1, 1.5, (10.0, 20.0)),
+            generator.cDistances(0.1047, 0.154, 1.5, (10.0, 20.0)),
         )
 
         directory = tmpdir.mkdir("tmp")
@@ -315,7 +317,7 @@ class TestDataDataset:
         scene = generator.Scene(
             generator.cFiles(balls, cue, pool, hdri),
             generator.cTable((2.07793, 1.03677), (0.25, 0.20), 1.70342),
-            generator.cDistances(0.1, 1.5, (10.0, 20.0)),
+            generator.cDistances(0.1047, 0.154, 1.5, (10.0, 20.0)),
         )
 
         directory = tmpdir.mkdir("tmp")
