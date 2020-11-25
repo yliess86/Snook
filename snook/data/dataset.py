@@ -130,6 +130,7 @@ class ReMaHeDataset(Dataset):
         *,
         spread: float = 4.0,
         train: bool = False,
+        transforms: List[Callable[..., Any]] = [ToTensor()],
     ) -> None:
         self.renders = [
             os.path.join(renders, f) 
@@ -144,7 +145,7 @@ class ReMaHeDataset(Dataset):
         assert len(self.renders) == len(self.data)
 
         self.spread = spread
-        self.transforms = Compose([ToTensor()])
+        self.transforms = Compose([*transforms])
 
     def __len__(self) -> int:
         return len(self.renders)
