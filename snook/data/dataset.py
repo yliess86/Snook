@@ -5,11 +5,12 @@ from scipy.stats import multivariate_normal
 from snook.data.generator import COLORS
 from torch.utils.data import Dataset
 from torchvision.transforms import Compose, ToTensor
-from typing import List, NamedTuple, Sequence, Tuple
+from typing import Any, Callable, List, NamedTuple, Sequence, Tuple
 
 import os
 import numpy as np
 import torch
+import torch.nn.functional as F
 
 
 DataFileContent = Tuple[
@@ -68,12 +69,39 @@ def create_heatmap(size: Size, *, points: Points, spread: float) -> np.ndarray:
     return (heatmap / heatmap.max()).T
 
 
-def create_linear_motionblur_kernel(length: int, angle: float) -> np.ndarray:
+def create_linear_motionblur_kernel(length: int, angle: float) -> torch.Tensor:
     kernel = np.zeros((length, length))
     center = length // 2
     kernel[center, :] = 1.0
-    kernel = rotate(kernel, angle)
-    return kernel / np.sum(kernel)
+    kernel = rotate(kernel, angle, reshape=False)
+    return torch.Tensor(kernel / np.sum(kernel))
+
+
+class RandomLinearMotionBlur:
+    def __init__(self, length: Range, angle: Range, p: float = 0.5) -> None:
+        self.length = length
+        self.angle = angle
+        self.p = p
+
+    def __call__(self, img: torch.Tensor) -> torch.Tensor:
+        if np.random.rand() > self.p:
+            return img
+        
+        length = int(np.random.uniform(*self.length))
+        angle = int(np.random.uniform(*self.angle))
+        kernel = create_linear_motionblur_kernel(length, angle)
+        kernel = kernel.unsqueeze(0).repeat(img.size(0), 1, 1)
+
+        img = img.unsqueeze(0)        # ( B, iC,     iH, iW)
+        kernel = kernel.unsqueeze(1)  # (oC, iC / G, kH, kW)
+
+        pad = ((length - 1) // 2)
+        even = int((length % 2) == 0)
+        padding = [pad + even, pad] * 2 + [0] * 4
+        
+        img = F.pad(img, padding)
+        img = F.conv2d(img, kernel, groups=img.size(1))
+        return img.squeeze(0)
 
 
 class ResizeSquare:
@@ -92,31 +120,6 @@ class ResizeSquare:
         new_img[offset_h:offset_h + h, offset_w:offset_w + w, :] = img
         
         return Image.fromarray((new_img * 255.0).astype(np.uint8))
-
-
-class RandomLinearMotionBlur:
-    def __init__(self, length: Range, angle: Range, p: float = 0.5) -> None:
-        self.length = length
-        self.angle = angle
-        self.p = p
-
-    def __call__(self, img: Image) -> Image:
-        if np.random.rand() > self.p:
-            return img
-        
-        length = int(np.random.uniform(*self.length))
-        angle = int(np.random.uniform(*self.angle))
-        kernel = create_linear_motionblur_kernel(length, angle)
-        
-        img = np.array(img) / 255.0
-        img = np.concatenate([
-            convolve2d(
-                img[:, :, i], kernel, boundary='fill', mode='same',
-            )[:, :, None]
-            for i in range(img.shape[-1])
-        ], axis=-1)
-        
-        return Image.fromarray((img * 255.0).astype(np.uint8))
 
 
 class ReMaHeDataset(Dataset):
@@ -176,6 +179,7 @@ class ClDataset(Dataset):
         *,
         window: int = 64,
         train: bool = False,
+        transforms: List[Callable[..., Any]] = [ToTensor()],
     ) -> None:
         _renders = [
             os.path.join(renders, f) 
@@ -190,7 +194,7 @@ class ClDataset(Dataset):
         assert len(_renders) == len(_data)
 
         self.window = window
-        self.transforms = Compose([ToTensor()])
+        self.transforms = Compose([*transforms])
         
         self.data: Sequence[ClSample] = []
         for render, datum in zip(_renders, _data):
@@ -209,13 +213,15 @@ class ClDataset(Dataset):
     def __getitem__(self, idx: int) -> Cl:
         path, (x, y), label = self.data[idx]
         
-        render = Image.open(path).convert("RGB")
-        render = self.transforms(render)
-
+        render = np.array(Image.open(path).convert("RGB")) / 255.0
+        
         offset = self.window // 2
-        view = render[:, y - offset:y + offset, x - offset:x + offset]
+        view = render[y - offset:y + offset, x - offset:x + offset, :]
+        
+        window = np.zeros((self.window, self.window, 3))
+        window[:view.shape[0], :view.shape[1], :] = view
 
-        window = torch.zeros((3, self.window, self.window), dtype=torch.float)
-        window[:, :view.size(1), :view.size(2)] = view
+        window = Image.fromarray((window * 255.0).astype(np.uint8))
+        window = self.transforms(window)
 
         return window, label
