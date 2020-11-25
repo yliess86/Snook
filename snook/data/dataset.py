@@ -1,4 +1,6 @@
 from PIL import Image, ImageDraw
+from scipy.ndimage import rotate
+from scipy.signal import convolve2d
 from scipy.stats import multivariate_normal
 from snook.data.generator import COLORS
 from torch.utils.data import Dataset
@@ -18,6 +20,7 @@ DataFileContent = Tuple[
 Size = Tuple[int, int]
 Point = Tuple[int, int]
 Points = List[Point]
+Range = Tuple[float, float]
 ReMaHe = Tuple[torch.Tensor, torch.Tensor,torch.Tensor]
 Cl = Tuple[torch.Tensor, int]
 
@@ -63,6 +66,57 @@ def create_heatmap(size: Size, *, points: Points, spread: float) -> np.ndarray:
         for p in points
     ], axis=-1).mean(axis=-1)
     return (heatmap / heatmap.max()).T
+
+
+def create_linear_motionblur_kernel(length: int, angle: float) -> np.ndarray:
+    kernel = np.zeros((length, length))
+    center = length // 2
+    kernel[center, :] = 1.0
+    kernel = rotate(kernel, angle)
+    return kernel / np.sum(kernel)
+
+
+class ResizeSquare:
+    def __init__(self, size: int) -> None:
+        self.size = size
+
+    def __call__(self, img: Image) -> Image:
+        ratio = max(img.width / self.size, img.height / self.size)
+        img = img.resize((int(img.width / ratio), int(img.height / ratio)))
+        img = np.array(img) / 255.0
+
+        h, w, c = img.shape
+        offset_w, offset_h = (self.size - w) // 2, (self.size - h) // 2
+        
+        new_img = np.zeros((self.size, self.size, c))
+        new_img[offset_h:offset_h + h, offset_w:offset_w + w, :] = img
+        
+        return Image.fromarray((new_img * 255.0).astype(np.uint8))
+
+
+class RandomLinearMotionBlur:
+    def __init__(self, length: Range, angle: Range, p: float = 0.5) -> None:
+        self.length = length
+        self.angle = angle
+        self.p = p
+
+    def __call__(self, img: Image) -> Image:
+        if np.random.rand() > self.p:
+            return img
+        
+        length = int(np.random.uniform(*self.length))
+        angle = int(np.random.uniform(*self.angle))
+        kernel = create_linear_motionblur_kernel(length, angle)
+        
+        img = np.array(img) / 255.0
+        img = np.concatenate([
+            convolve2d(
+                img[:, :, i], kernel, boundary='fill', mode='same',
+            )[:, :, None]
+            for i in range(img.shape[-1])
+        ], axis=-1)
+        
+        return Image.fromarray((img * 255.0).astype(np.uint8))
 
 
 class ReMaHeDataset(Dataset):
