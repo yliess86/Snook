@@ -13,3 +13,5 @@
 1174 337 2
 
 [0 cues] ndc_x ndc_y
+
+[0 mask] ndc_x ndc_y

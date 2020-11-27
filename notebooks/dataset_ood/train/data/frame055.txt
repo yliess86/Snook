@@ -15,3 +15,5 @@
 
 [1 cues] ndc_x ndc_y
 603 525
+
+[0 mask] ndc_x ndc_y
