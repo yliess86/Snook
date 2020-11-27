@@ -254,6 +254,7 @@ class ClDataset(Dataset):
         window: int = 64,
         train: bool = False,
         transforms: List[Callable[..., Any]] = [ToTensor()],
+        size: int = None,
     ) -> None:
         _renders = [
             os.path.join(renders, f) 
@@ -269,6 +270,7 @@ class ClDataset(Dataset):
 
         self.window = window
         self.transforms = Compose([*transforms])
+        self.size = size
         
         self.data: Sequence[ClSample] = []
         for render, datum in zip(_renders, _data):
@@ -287,8 +289,15 @@ class ClDataset(Dataset):
     def __getitem__(self, idx: int) -> Cl:
         path, (x, y), label = self.data[idx]
         
-        render = np.array(Image.open(path).convert("RGB")) / 255.0
-        
+        render = Image.open(path).convert("RGB")
+        ratio = 1
+        if self.size is not None:
+            w, h = render.width, render.height
+            ratio = max(render.w / self.size, render.h / self.size)
+            render = render.resize((int(w / ratio), int(h / ratio)))
+        render = np.array(render) / 255.0
+
+        x, y = int(x / ratio), int(y / ratio)
         offset = self.window // 2
         view = render[y - offset:y + offset, x - offset:x + offset, :]
         
