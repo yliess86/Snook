@@ -143,3 +143,5 @@ cython_debug/
 # Resources and Dataset
 resources/hdri/
 notebooks/dataset/
+notebooks/dataset_ood/json/
+notebooks/dataset_ood/script.py
