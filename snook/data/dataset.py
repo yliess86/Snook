@@ -23,6 +23,7 @@ Point = Tuple[int, int]
 Points = List[Point]
 Range = Tuple[float, float]
 ReMaHe = Tuple[torch.Tensor, torch.Tensor,torch.Tensor]
+TemporalReHe = Tuple[torch.Tensor, torch.Tensor]
 Cl = Tuple[torch.Tensor, int]
 
 
@@ -156,7 +157,7 @@ class ReMaHeDataset(Dataset):
             balls, cues, mask = parse_data_file(f.read())
         landmarks = [ball[:2] for ball in balls] + [cue[:2] for cue in cues]
 
-        size = (render.width, render.height)
+        size = render.width, render.height
         mask = create_mask(size, corners=mask)
         heatmap = create_heatmap(size, points=landmarks, spread=self.spread)
 
@@ -164,6 +165,61 @@ class ReMaHeDataset(Dataset):
             self.transforms(render),
             torch.from_numpy(mask),
             torch.from_numpy(heatmap),
+        )
+
+
+class TemporalReHeDataset(Dataset):
+    def __init__(
+        self,
+        renders: str,
+        data: str,
+        *,
+        spread: float = 4.0,
+        train: bool = False,
+        transforms: List[Callable[..., Any]] = [ToTensor()],
+    ) -> None:
+        self.renders = [
+            os.path.join(renders, f) 
+            for f in sorted(os.listdir(renders))
+            if f.endswith(".png")
+        ]
+        self.data = [
+            os.path.join(data, f) 
+            for f in sorted(os.listdir(data))
+            if f.endswith(".txt")
+        ]
+        assert len(self.renders) == len(self.data)
+
+        self.spread = spread
+        self.transforms = Compose([*transforms])
+
+    def __len__(self) -> int:
+        return len(self.renders) - 1
+
+    def __getitem__(self, idx: int) -> TemporalReHe:
+        render_0 = Image.open(self.renders[idx]).convert("RGB")
+        size = render.width, render.height
+        with open(self.data[idx], "r") as f:
+            balls, cues, _ = parse_data_file(f.read())
+        landmarks = [ball[:2] for ball in balls] + [cue[:2] for cue in cues]
+        heatmap_0 = create_heatmap(size, points=landmarks, spread=self.spread)
+
+        render_1 = Image.open(self.renders[idx + 1]).convert("RGB")
+        size = render.width, render.height
+        with open(self.data[idx + 1], "r") as f:
+            balls, cues, _ = parse_data_file(f.read())
+        landmarks = [ball[:2] for ball in balls] + [cue[:2] for cue in cues]
+        heatmap_1 = create_heatmap(size, points=landmarks, spread=self.spread)
+
+        return (
+            torch.cat([
+                self.transforms(render_0).unsqueeze(0),
+                self.transforms(render_1).unsqueeze(0),
+            ]),
+            torch.cat([
+                torch.from_numpy(heatmap_0).unsqueeze(0),
+                torch.from_numpy(heatmap_1).unsqueeze(0),
+            ]),
         )
 
 
