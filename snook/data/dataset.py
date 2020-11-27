@@ -122,6 +122,17 @@ class ResizeSquare:
         
         return Image.fromarray((new_img * 255.0).astype(np.uint8))
 
+    def reposition(self, points: Points, size: Size) -> Points:
+        w, h = size
+        ratio = max(w / self.size, h / self.size)
+        points = np.array(points) / ratio
+        
+        w, h = int(w / ratio), int(h / ratio)
+        points[:, 0] += (self.size - w) // 2
+        points[:, 1] += (self.size - h) // 2
+
+        return points.tolist()
+
 
 class ReMaHeDataset(Dataset):
     def __init__(
@@ -197,19 +208,25 @@ class TemporalReHeDataset(Dataset):
         return len(self.renders) - 1
 
     def __getitem__(self, idx: int) -> TemporalReHe:
-        render_0 = Image.open(self.renders[idx]).convert("RGB")
-        size = render.width, render.height
-        with open(self.data[idx], "r") as f:
-            balls, cues, _ = parse_data_file(f.read())
-        landmarks = [ball[:2] for ball in balls] + [cue[:2] for cue in cues]
-        heatmap_0 = create_heatmap(size, points=landmarks, spread=self.spread)
+        transforms = self.transforms.transforms
+        resize_trans = [t for t in transforms if type(t) == ResizeSquare]
+        reposition = lambda x, size: (
+            resize_trans[0].reposition(x, size) if len(resize_trans) else x
+        )
+        
+        def generate_data(i: int) -> Tuple[torch.Tensor, torch.Tensor]:
+            render = Image.open(self.renders[i]).convert("RGB")
+            size = render.width, render.height
+            with open(self.data[idx], "r") as f:
+                balls, cues, _ = parse_data_file(f.read())
+            points = [ball[:2] for ball in balls] + [cue[:2] for cue in cues]
+            points = reposition(points, size)
+            size = [resize_trans[0].size] * 2 if len(resize_trans) else size
+            heatmap = create_heatmap(size, points=points, spread=self.spread)
+            return render, heatmap
 
-        render_1 = Image.open(self.renders[idx + 1]).convert("RGB")
-        size = render.width, render.height
-        with open(self.data[idx + 1], "r") as f:
-            balls, cues, _ = parse_data_file(f.read())
-        landmarks = [ball[:2] for ball in balls] + [cue[:2] for cue in cues]
-        heatmap_1 = create_heatmap(size, points=landmarks, spread=self.spread)
+        render_0, heatmap_0 = generate_data(idx)
+        render_1, heatmap_1 = generate_data(idx + 1)
 
         return (
             torch.cat([
