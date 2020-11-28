@@ -1,25 +1,26 @@
 from PIL import Image
 
+import argparse
 import cv2
 import numpy as np
 import snook.data as sd
 import snook.model as sm
-import sys
 import torch
 
 
+parser = argparse.ArgumentParser()
+parser.add_argument("--autoencoder", "-a", type=str, default="notebooks/models/autoencoder_ood.ts", help="AutoEncoder TorchScript Path")
+parser.add_argument("--classifier",  "-c", type=str, default="notebooks/models/classifier_ood.ts",  help="Classifier TorchScript Path")
+parser.add_argument("--video",       "-v", type=str,                                                help="Video File Path")
+args = parser.parse_args()
+
 COLORS = [(0, 0, 0), (255, 255, 255), (0, 255, 255), (0, 0, 255), (255, 0, 0)]
 
-autoencoder = "notebooks/models/autoencoder_ood.ts"
-classifier = "notebooks/models/classifier_ood.ts"
-
-snook = sm.Snook(autoencoder, classifier)
+snook = sm.Snook(args.autoencoder, args.classifier)
 snook = snook.eval().cuda()
 
+cap = cv2.VideoCapture(args.video)
 resize = sd.ResizeSquare(512)
-
-path = sys.argv[1]
-cap = cv2.VideoCapture(path)
 
 while True:
     ret, frame = cap.read()
