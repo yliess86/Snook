@@ -1,3 +1,4 @@
+from snook.utils import peak_detection, peak_windows
 from typing import List, NamedTuple, Tuple, Union
 
 import torch
@@ -5,6 +6,7 @@ import torch.nn as nn
 
 
 EncoderProjection = Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]
+SnookOutput = Tuple[torch.Tensor, torch.Tensor, torch.Tensor]
 
 
 class Layer(NamedTuple):
@@ -305,3 +307,23 @@ class Classifier(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.classifier(self.features(x)).view((x.size(0), -1))
+
+
+class Snook(nn.Module):
+    def __init__(self, autoencoder: str, classifier: str) -> None:
+        super(Snook, self).__init__()
+        self.autoencoder = torch.jit.load(autoencoder)
+        self.classifier  = torch.jit.load(classifier)
+        
+    def forward(self, x: torch.Tensor, alpha=0.45) -> SnookOutput:
+        heatmap = torch.clamp(self.autoencoder(x.unsqueeze(0))[0, 0], 0, 1)
+        heatmap[heatmap < alpha] = 0
+
+        peaks = peak_detection(heatmap)
+        windows = peak_windows(x, peaks)
+
+        logits = self.classifier(windows)
+        probas = torch.softmax(logits, dim=0)
+        labels = torch.argmax(probas, dim=-1)
+
+        return heatmap, peaks, labels
