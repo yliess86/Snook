@@ -2,8 +2,16 @@ from abc import ABC, abstractmethod
 from mathutils import Euler, Matrix, Vector
 from typing import List, Optional, Tuple
 
-import bpy
 import numpy as np
+import warnings
+
+try:
+    import bpy
+except ImportError:
+    warnings.warn(
+        f"Blender is not installed as a Python Module.\n"
+        f"snook.data.blender module won't work properly.\n"
+    )
 
 
 Size = Tuple[int, int]
