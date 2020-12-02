@@ -20,6 +20,7 @@ if __name__ == "__main__":
     parser.add_argument("--dest",  type=str, helper="destination directory")
     args = parser.parse_args()
 
+
     scene = None
     def generate(name: str, path: str, samples: int) -> None:
         global scene
