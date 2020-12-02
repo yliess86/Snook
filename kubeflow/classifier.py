@@ -1,8 +1,15 @@
-if __name__ == "__main__":
+if __name__ == '__main__':
     from tqdm import tqdm
     from torch.optim import AdamW
     from torch.utils.data import DataLoader
-    from torchvision.transforms import ColorJitter, ToTensor
+    from torchvision.transforms import (
+        ColorJitter,
+        RandomHorizontalFlip,
+        RandomVerticalFlip,
+        RandomRotation,
+        ToTensor,
+    )
+    from typing import Tuple
 
     import argparse
     import numpy as np
@@ -10,11 +17,11 @@ if __name__ == "__main__":
     import snook.data as sd
     import snook.model as sm
     import torch
+    import torch.nn as nn
 
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--epochs",     type=int, helper="training epochs")
-    parser.add_argument("--refine",     type=int, helper="refining epochs")
+    parser.add_argument("--epochs",     type=int, helper="raining epochs")
     parser.add_argument("--batch_size", type=int, helper="batch size")
     parser.add_argument("--n_workers",  type=int, helper="# worker threads")
     parser.add_argument("--dataset",    type=str, helper="dataset directory")
@@ -22,27 +29,27 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     transforms = [
+        RandomHorizontalFlip(),
+        RandomVerticalFlip(),
+        RandomRotation(360),
         ColorJitter(0.2, 0.2, 0.2, 0.1),
         ToTensor(),
         sd.RandomLinearMotionBlur(length=(3, 15), angle=(0, 360), p=0.5),
     ]
 
     datasets = {
-        "train": sd.ReMaHeDataset(
+        "train": sd.ClDataset(
             os.path.join(args.dataset, "train/renders"),
             os.path.join(args.dataset, "train/data"),
-            spread=4.0,
             transforms=transforms,
         ),
-        "valid": sd.ReMaHeDataset(
+        "valid": sd.ClDataset(
             os.path.join(args.dataset, "valid/renders"),
             os.path.join(args.dataset, "valid/data"),
-            spread=4.0,
         ),
-        "test": sd.ReMaHeDataset(
+        "test": sd.ClDataset(
             os.path.join(args.dataset, "test/renders"),
             os.path.join(args.dataset, "test/data"),
-            spread=4.0,
         ),
     }
 
@@ -71,53 +78,64 @@ if __name__ == "__main__":
     }
 
 
-    layers = [sm.Layer(16, 24, 1), sm.Layer(24, 32, 6), sm.Layer(32, 64, 6)]
-    model = sm.AutoEncoder(layers, 3, 1, scale=0.4).cuda()
-    criterion = sm.AdaptiveWingLoss().cuda()
+    layers    = [
+        sm.Layer(  3,  16, 3),
+        sm.Layer( 16,  32, 3),
+        sm.Layer( 32,  64, 3),
+        sm.Layer( 64, 128, 3),
+        sm.Layer(128, 256, 3),
+    ]
+    model = sm.Classifier(
+        layers,
+        hidden=512,
+        n_class=len(sd.COLORS) + 1,
+        scale=0.4
+    ).cuda()
+    criterion = nn.CrossEntropyLoss().cuda()
     optim = AdamW(model.parameters())
     def step(
         name: str,
         loader: DataLoader,
-        spread: float,
+        dataset: sd.ClDataset,
         is_train: bool = True,
-    ) -> float:
-        global model, criterion, optim
+    ) -> Tuple[float, float]:
+        global model, criterion, optimizer
         model = model.train() if is_train else model.eval()
         
-        total_loss = 0.0
+        total_loss, total_acc = 0.0, 0.0
         pbar = tqdm(loader, name)
-        for render, mask, heatmap in pbar:
-            render, mask, heatmap = render.cuda(), mask.cuda(), heatmap.cuda()
+        for window, label in pbar:
+            window, label = window.cuda(), label.cuda()
             
             if is_train:
                 optim.zero_grad()
             
-            loss = criterion(model(render).squeeze(1), heatmap)
+            logits = model(window)
+            loss = criterion(logits, label)
+            acc = (torch.argmax(logits, dim=1) == label).sum()
             
             if is_train:
                 loss.backward()
                 optim.step()
             
             total_loss += loss.item()
-            pbar.set_postfix(loss=total_loss / len(loader), spread=spread)
+            total_acc += acc.item()
+            pbar.set_postfix(
+                loss=total_loss / len(loader),
+                acc=total_acc / len(dataset),
+            )
         
-        return total_loss / len(loader)
+        return total_loss / len(loader), total_acc / len(dataset)
 
 
-    spread_range = 1000, 16
-    history = {"train": [], "valid": []}
-    for epoch in tqdm(range(args.epochs + args.refine), desc="Epoch"):
-        t = min(epoch, args.epochs) / args.epochs
-        spread = max(spread_range) - t * abs(np.subtract(*spread_range))
-        loaders["train"].dataset.spread = spread
-        loaders["valid"].dataset.spread = spread
+    for epoch in tqdm(range(args.epochs), desc="Epoch"):
+        step("Train", loaders["train"], datasets["train"], is_train=True)
         
-       step("Train", loaders["train"], spread, is_train=True)
         with torch.no_grad():
-            step("Valid", loaders["valid"], spread, is_train=False)
-            
+            step("Valid", loaders["valid"], datasets["valid"],, is_train=False)
+                
     with torch.no_grad():
-        step("Test", loaders["test"], spread, is_train=False)
-
-    fake_input = torch.rand(1, 3, 512, 512))
+        step("Test", loaders["test"], datasets["test"],, is_train=False)
+        
+    fake_input = torch.rand(1, 3, 64, 64)
     torch.jit.save(torch.jit.trace(model.cpu(), fake_input), args.save)
