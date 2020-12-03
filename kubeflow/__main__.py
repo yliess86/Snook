@@ -2,6 +2,8 @@ from kubeflow.helper import DVICContainerOperation as ContainerOperation
 from kubeflow.helper import DVICPipelineWrapper as PipelineWrapper
 
 
+DOCKER_IMG             = ""
+
 PIPELINE_NAME          = "Snook"
 PIPELINE_DESC          = "Snook Training Experiments"
 
@@ -29,7 +31,7 @@ CLASSIFIER_SAVE        = f"{BASE_PATH}/classifier.ts"
 
 with PipelineWrapper(PIPELINE_NAME, PIPELINE_DESC) as pipeline:
     dataset = ContainerOperation(
-        "yhati/dataset",
+        DOCKER_IMG,
         "kubeflow/dataset.py",
         f"--train {TRAIN_SAMPLES}",
         f"--valid {VALID_SAMPLES}",
@@ -39,7 +41,7 @@ with PipelineWrapper(PIPELINE_NAME, PIPELINE_DESC) as pipeline:
     ).select_node().mount_host_path(BASE_PATH, MOUNT_PATH).gpu(DATASET_GPU)
 
     autoencoder = ContainerOperation(
-        "yhati/autoencoder",
+        DOCKER_IMG,
         "kubeflow/autoencoder.py",
         f"--epochs {AUTOENCODER_EPOCHS}",
         f"--refine {AUTOENCODER_REFINE}",
@@ -51,7 +53,7 @@ with PipelineWrapper(PIPELINE_NAME, PIPELINE_DESC) as pipeline:
     ).select_node().mount_host_path(BASE_PATH, MOUNT_PATH).gpu(AUTOENCODER_GPU)
 
     classifier = ContainerOperation(
-        "yhati/classifier",
+        DOCKER_IMG,
         "kubeflow/classifier.py",
         f"--epochs {CLASSIFIER_EPOCHS}",
         f"--batch_size {CLASSIFIER_BATCH_SIZE}",
