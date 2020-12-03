@@ -1,6 +1,14 @@
-numpy==1.18.1
-mathutils==2.81.2
+matplotlib==3.2.0
+kubernetes==11.0.0
+tqdm==4.43.0
 scipy==1.4.1
+opencv_python==4.2.0.34
+numpy==1.18.1
 torchvision==0.7.0
+kfp_server_api==1.0.4
+kfp_pipeline_spec==0.1.2
+mathutils==2.81.2
+splogger==0.1.4
 bpy==2.82.1
+kfp==1.1.1
 Pillow==8.0.1

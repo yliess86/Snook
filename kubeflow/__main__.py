@@ -1,6 +1,5 @@
 from kubeflow.helper import DVICContainerOperation as ContainerOperation
 from kubeflow.helper import DVICPipelineWrapper as PipelineWrapper
-from kubeflow.helper import noop
 
 
 PIPELINE_NAME          = "Snook"
@@ -25,7 +24,7 @@ AUTOENCODER_SAVE       = f"{BASE_PATH}/autoencoder.ts"
 CLASSIFIER_EPOCHS      =  10
 CLASSIFIER_BATCH_SIZE  = 128
 CLASSIFIER_N_WORKERS   =   8
-CLASSIFIER_GPU         =   2
+CLASSIFIER_GPU         =   1
 CLASSIFIER_SAVE        = f"{BASE_PATH}/classifier.ts"
 
 with PipelineWrapper(PIPELINE_NAME, PIPELINE_DESC) as pipeline:
@@ -65,5 +64,4 @@ with PipelineWrapper(PIPELINE_NAME, PIPELINE_DESC) as pipeline:
     dataset | autoencoder
     dataset | classifier
 
-    no_op = noop()
     pipeline()

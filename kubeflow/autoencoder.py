@@ -112,12 +112,12 @@ if __name__ == "__main__":
         loaders["train"].dataset.spread = spread
         loaders["valid"].dataset.spread = spread
         
-       step("Train", loaders["train"], spread, is_train=True)
+        step("Train", loaders["train"], spread, is_train=True)
         with torch.no_grad():
             step("Valid", loaders["valid"], spread, is_train=False)
             
     with torch.no_grad():
         step("Test", loaders["test"], spread, is_train=False)
 
-    fake_input = torch.rand(1, 3, 512, 512))
+    fake_input = torch.rand((1, 3, 512, 512))
     torch.jit.save(torch.jit.trace(model.cpu(), fake_input), args.save)
