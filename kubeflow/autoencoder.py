@@ -1,5 +1,6 @@
 if __name__ == "__main__":
     from tqdm import tqdm
+    from torch.cuda.amp import autocast, GradScaler
     from torch.optim import AdamW
     from torch.utils.data import DataLoader
     from torchvision.transforms import ColorJitter, ToTensor
@@ -75,13 +76,14 @@ if __name__ == "__main__":
     model = sm.AutoEncoder(layers, 3, 1, scale=0.4).cuda()
     criterion = sm.AdaptiveWingLoss().cuda()
     optim = AdamW(model.parameters())
+    scaler = GradScaler()
     def step(
         name: str,
         loader: DataLoader,
         spread: float,
         is_train: bool = True,
     ) -> float:
-        global model, criterion, optim
+        global model, criterion, optim, scaler
         model = model.train() if is_train else model.eval()
         
         total_loss = 0.0
@@ -92,11 +94,16 @@ if __name__ == "__main__":
             if is_train:
                 optim.zero_grad()
             
-            loss = criterion(model(render).squeeze(1), heatmap)
+            with autocast():
+                loss = criterion(model(render).squeeze(1), heatmap)
             
+            loss = scaler.scale(loss)
+
             if is_train:
                 loss.backward()
-                optim.step()
+                scaler.step(optim)
+                
+            scaler.update()
             
             total_loss += loss.item()
             pbar.set_postfix(loss=total_loss / len(loader), spread=spread)

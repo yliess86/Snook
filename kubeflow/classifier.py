@@ -1,5 +1,6 @@
 if __name__ == '__main__':
     from tqdm import tqdm
+    from torch.cuda.amp import autocast, GradScaler
     from torch.optim import AdamW
     from torch.utils.data import DataLoader
     from torchvision.transforms import (
@@ -93,13 +94,14 @@ if __name__ == '__main__':
     ).cuda()
     criterion = nn.CrossEntropyLoss().cuda()
     optim = AdamW(model.parameters())
+    scaler = GradScaler()
     def step(
         name: str,
         loader: DataLoader,
         dataset: sd.ClDataset,
         is_train: bool = True,
     ) -> Tuple[float, float]:
-        global model, criterion, optimizer
+        global model, criterion, optimizer, scaler
         model = model.train() if is_train else model.eval()
         
         total_loss, total_acc = 0.0, 0.0
@@ -110,13 +112,19 @@ if __name__ == '__main__':
             if is_train:
                 optim.zero_grad()
             
-            logits = model(window)
-            loss = criterion(logits, label)
-            acc = (torch.argmax(logits, dim=1) == label).sum()
+            with autocast():
+                logits = model(window)
+                loss = criterion(logits, label)
+                acc = (torch.argmax(logits, dim=1) == label).sum()
             
+            loss = scaler.scale(loss)
+            acc = scaler.scale(acc)
+
             if is_train:
                 loss.backward()
-                optim.step()
+                scaler.step(optim)
+                
+            scaler.update()
             
             total_loss += loss.item()
             total_acc += acc.item()
