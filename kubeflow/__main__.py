@@ -40,9 +40,9 @@ with PipelineWrapper(PIPELINE_NAME, PIPELINE_DESC) as pipeline:
             f"--valid {VALID_SAMPLES}",
             f"--test {TEST_SAMPLES}",
             f"--dest {DATASET_PATH}",
-            f"--tile {DATASET_TILE}\"",
+            f"--tile {DATASET_TILE};",
+            f"exit 0\"", #TODO: Fix when no more bpy segfault on exit
         )),
-        ";", "exit", "0", #TODO: Fix when no more bpy segfault on exit
         name="dataset",
     ).select_node().mount_host_path(BASE_PATH, MOUNT_PATH).gpu(DATASET_GPU)
 
