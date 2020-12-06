@@ -7,5 +7,11 @@ from snook.data.dataset import (
 )
 from snook.data.generator import COLORS, Scene
 from snook.data.generator import (
-    cDistances, cFiles, cProbas, cSampling, cSensor, cTable
+    cDistances,
+    cFiles,
+    cProbas,
+    cRender,
+    cSampling,
+    cSensor,
+    cTable,
 )

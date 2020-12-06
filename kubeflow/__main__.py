@@ -15,6 +15,7 @@ TRAIN_SAMPLES          = 1_800_000
 VALID_SAMPLES          =   100_000
 TEST_SAMPLES           =   100_000
 DATASET_GPU            =         1
+DATASET_TILE           =         1
 
 AUTOENCODER_EPOCHS     =  50
 AUTOENCODER_REFINE     =   5
@@ -38,7 +39,8 @@ with PipelineWrapper(PIPELINE_NAME, PIPELINE_DESC) as pipeline:
             f"--train {TRAIN_SAMPLES}",
             f"--valid {VALID_SAMPLES}",
             f"--test {TEST_SAMPLES}",
-            f"--dest {DATASET_PATH}\"",
+            f"--dest {DATASET_PATH}",
+            f"--tile {DATASET_TILE}\"",
         )),
         ";", "exit", "0", #TODO: Fix when no more bpy segfault on exit
         name="dataset",

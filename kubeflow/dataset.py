@@ -14,25 +14,30 @@ if __name__ == "__main__":
     HDRI   = "resources/hdri"
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--train", type=int, helper="# training samples")
-    parser.add_argument("--valid", type=int, helper="# validation samples")
-    parser.add_argument("--test",  type=int, helper="# testing samples")
-    parser.add_argument("--dest",  type=str, helper="destination directory")
+    parser.add_argument("--train", type=int,   helper="# training samples")
+    parser.add_argument("--valid", type=int,   helper="# validation samples")
+    parser.add_argument("--test",  type=int,   helper="# testing samples")
+    parser.add_argument("--dest",  type=str,   helper="destination directory")
+    parser.add_argument("--tile",  type=float, helper="tile size percent")
     args = parser.parse_args()
 
 
     scene = None
     def generate(name: str, path: str, samples: int) -> None:
-        global scene
+        global args, scene
         
         if os.path.isdir(path):
             return
         
         if scene is None:
+            size = 512
+            tile = int(size * min(max(args.tile, 0), 1))
+
             scene = sd.Scene(
                 sd.cFiles(BALLS, CUE, POOL, HDRI),
                 sd.cTable((2.07793, 1.03677), (0.25, 0.20), 1.70342),
                 sd.cDistances(0.1047, 0.154, 1.5, (10.0, 20.0)),
+                sd.cRender((size, size), (tile, tile), 64, False, True)
             )
         
         renders = os.path.join(path, "renders")
