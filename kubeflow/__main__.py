@@ -7,8 +7,7 @@ DOCKER_IMG             = "yliess86/snook"
 PIPELINE_NAME          = "Snook"
 PIPELINE_DESC          = "Snook Training Experiments"
 
-SNOOK_WORKING_DIR      = "/Snook"
-
+WORKING_DIR            = "/Snook"
 BASE_PATH              = "/data"
 MOUNT_PATH             = "/data/dl/Snook"
 
@@ -37,7 +36,7 @@ with PipelineWrapper(PIPELINE_NAME, PIPELINE_DESC) as pipeline:
         DOCKER_IMG,
         "-c",
         " ".join((
-            f"PYTHONPATH={SNOOK_WORKING_DIR} python3 kubeflow/dataset.py",
+            f"PYTHONPATH={WORKING_DIR} python3 -m kubeflow.dataset",
             f"--train {TRAIN_SAMPLES}",
             f"--valid {VALID_SAMPLES}",
             f"--test {TEST_SAMPLES}",
@@ -52,13 +51,14 @@ with PipelineWrapper(PIPELINE_NAME, PIPELINE_DESC) as pipeline:
         DOCKER_IMG,
         "-c",
         " ".join((
-            f"PYTHONPATH={SNOOK_WORKING_DIR} python3 kubeflow/autoencoder.py",
+            f"PYTHONPATH={WORKING_DIR} python3 -m kubeflow.autoencoder",
             f"--epochs {AUTOENCODER_EPOCHS}",
             f"--refine {AUTOENCODER_REFINE}",
             f"--batch_size {AUTOENCODER_BATCH_SIZE}",
             f"--n_workers {AUTOENCODER_N_WORKERS}",
             f"--dataset {DATASET_PATH}",
-            f"--save {AUTOENCODER_SAVE}",
+            f"--save {AUTOENCODER_SAVE} ;",
+            f"exit 0", #TODO: Fix when no more bpy segfault on exit
         )),
         name="autoencoder",
     ).select_node().mount_host_path(BASE_PATH, MOUNT_PATH).gpu(AUTOENCODER_GPU)
@@ -67,12 +67,13 @@ with PipelineWrapper(PIPELINE_NAME, PIPELINE_DESC) as pipeline:
         DOCKER_IMG,
         "-c",
         " ".join((
-            f"PYTHONPATH={SNOOK_WORKING_DIR} python3 kubeflow/classifier.py",
+            f"PYTHONPATH={WORKING_DIR} python3 -m kubeflow.classifier",
             f"--epochs {CLASSIFIER_EPOCHS}",
             f"--batch_size {CLASSIFIER_BATCH_SIZE}",
             f"--n_workers {CLASSIFIER_N_WORKERS}",
             f"--dataset {DATASET_PATH}",
-            f"--save {CLASSIFIER_SAVE}",
+            f"--save {CLASSIFIER_SAVE} ;",
+            f"exit 0", #TODO: Fix when no more bpy segfault on exit
         )),
         name="classifier",
     ).select_node().mount_host_path(BASE_PATH, MOUNT_PATH).gpu(CLASSIFIER_GPU)

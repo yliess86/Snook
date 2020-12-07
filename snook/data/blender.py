@@ -9,9 +9,9 @@ try:
     import bpy
 except ImportError:
     warnings.warn(
-        f"Blender is not installed as a Python Module.\n"
-        f"snook.data.blender module won't work properly.\n"
+        f"Blender is not installed as a Python Module and is required.\n"
     )
+    exit(1)
 
 
 Size = Tuple[int, int]

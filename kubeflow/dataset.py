@@ -1,7 +1,6 @@
 if __name__ == "__main__":
     from torch.utils.data import DataLoader
     from tqdm import tqdm
-    from snook.utils import plot_render_mask_heatmap
 
     import argparse
     import os
