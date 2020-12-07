@@ -26,7 +26,8 @@ if __name__ == "__main__":
         global args, scene
         
         if os.path.isdir(path):
-            return
+            if len(os.listdir(path)) > 0:
+                return
         
         if scene is None:
             size = 512
