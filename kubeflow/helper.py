@@ -138,6 +138,7 @@ class DVICContainerOperation:
         self.ngpu = None
         self.volumes = []
         self.after = []
+        self.wdir = None
         if DVICPipelineWrapper.current_pipeline:
             DVICPipelineWrapper.current_pipeline += self
 
@@ -150,6 +151,8 @@ class DVICContainerOperation:
             self.op.add_affinity(V1Affinity(node_affinity=V1NodeAffinity(required_during_scheduling_ignored_during_execution=V1NodeSelector(node_selector_terms=[V1NodeSelectorTerm(match_expressions=[V1NodeSelectorRequirement(key='kubernetes.io/hostname', operator='In', values=[self.node])])]))))
         if self.ngpu:
             self.op.set_gpu_limit(self.ngpu)
+        if self.working_dir:
+            self.op.working_dir = self.wdir
         if len(self.volumes) > 0:
             for vol in self.volumes:
                 self.op.add_pvolumes(vol)
@@ -176,6 +179,10 @@ class DVICContainerOperation:
         Requested number of GPUs
         """
         self.ngpu = request
+        return self
+
+    def working_dir(self, path):
+        self.wdir = path
         return self
 
     def mount_host_path(self, container_path, host_path, name=None):

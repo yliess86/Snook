@@ -1,7 +1,7 @@
 if __name__ == "__main__":
     from torch.utils.data import DataLoader
     from tqdm import tqdm
-    from utils import plot_render_mask_heatmap
+    from snook.utils import plot_render_mask_heatmap
 
     import argparse
     import os
@@ -14,11 +14,11 @@ if __name__ == "__main__":
     HDRI   = "resources/hdri"
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--train", type=int,   helper="# training samples")
-    parser.add_argument("--valid", type=int,   helper="# validation samples")
-    parser.add_argument("--test",  type=int,   helper="# testing samples")
-    parser.add_argument("--dest",  type=str,   helper="destination directory")
-    parser.add_argument("--tile",  type=float, helper="tile size percent")
+    parser.add_argument("--train", type=int,   help="# training samples")
+    parser.add_argument("--valid", type=int,   help="# validation samples")
+    parser.add_argument("--test",  type=int,   help="# testing samples")
+    parser.add_argument("--dest",  type=str,   help="destination directory")
+    parser.add_argument("--tile",  type=float, help="tile size percent")
     args = parser.parse_args()
 
 

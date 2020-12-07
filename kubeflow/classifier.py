@@ -22,11 +22,11 @@ if __name__ == '__main__':
 
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--epochs",     type=int, helper="raining epochs")
-    parser.add_argument("--batch_size", type=int, helper="batch size")
-    parser.add_argument("--n_workers",  type=int, helper="# worker threads")
-    parser.add_argument("--dataset",    type=str, helper="dataset directory")
-    parser.add_argument("--save",       type=str, helper="model save path")
+    parser.add_argument("--epochs",     type=int, help="raining epochs")
+    parser.add_argument("--batch_size", type=int, help="batch size")
+    parser.add_argument("--n_workers",  type=int, help="# worker threads")
+    parser.add_argument("--dataset",    type=str, help="dataset directory")
+    parser.add_argument("--save",       type=str, help="model save path")
     args = parser.parse_args()
 
     transforms = [
