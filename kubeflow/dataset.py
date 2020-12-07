@@ -36,7 +36,7 @@ if __name__ == "__main__":
                 sd.cFiles(BALLS, CUE, POOL, HDRI),
                 sd.cTable((2.07793, 1.03677), (0.25, 0.20), 1.70342),
                 sd.cDistances(0.1047, 0.154, 1.5, (10.0, 20.0)),
-                sd.cRender((size, size), (tile, tile), 64, False, True)
+                render = sd.cRender((size,) * 2, (tile,) * 2, 64, False, True)
             )
         
         renders = os.path.join(path, "renders")
