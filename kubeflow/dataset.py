@@ -1,5 +1,4 @@
 if __name__ == "__main__":
-    from torch.utils.data import DataLoader
     from tqdm import tqdm
 
     import argparse
@@ -13,11 +12,10 @@ if __name__ == "__main__":
     HDRI   = "resources/hdri"
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--train", type=int,   help="# training samples")
-    parser.add_argument("--valid", type=int,   help="# validation samples")
-    parser.add_argument("--test",  type=int,   help="# testing samples")
-    parser.add_argument("--dest",  type=str,   help="destination directory")
-    parser.add_argument("--tile",  type=float, help="tile size percent")
+    parser.add_argument("--samples", type=int,   help="# samples")
+    parser.add_argument("--type",    type=str,   help="generation type")
+    parser.add_argument("--dest",    type=str,   help="destination directory")
+    parser.add_argument("--tile",    type=float, help="tile size percent")
     args = parser.parse_args()
 
 
@@ -52,6 +50,8 @@ if __name__ == "__main__":
             scene.register(f"{data}/{i}.txt")
 
 
-    generate("Train", os.path.join(args.dest, "train"), args.train)
-    generate("Valid", os.path.join(args.dest, "valid"), args.valid)
-    generate("Test",  os.path.join(args.dest, "test"),  args.test)
+    generate(
+        args.type.title(),
+        os.path.join(args.dest, args.type),
+        args.samples,
+    )

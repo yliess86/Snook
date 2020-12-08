@@ -262,34 +262,8 @@ class DVICPipelineWrapper:
         splogger.success(f'Pipeline URL: https://kubflow.dvic.devinci.fr/_/pipeline/#/experiments/details/{self.res.run_id}')
         return self
 
-# END HELPERS
 
-# @kfp.dsl.pipeline(
-#     name="Test pipeline2",
-#     description="Testing KF"
-# )
-# def generic_pipeline():
-#     # file_outputs={"hello_output": "/out"}
-#     container_element("test_element", "win32gg/testw").
-#     op = kfp.dsl.ContainerOp("generer_dataset", "win32gg/testw", arguments=("-p", "/data/out"))
-#     select_node(op, 'dgx.dvic.devinci.fr')
-#     mount_host_path(op, '/data', 'dgx-data', '/data/dl/test')
-
-# c = kfp.Client("https://kubflow.dvic.devinci.fr/pipeline")
-# c.create_run_from_pipeline_func(generic_pipeline, {}, "test_pipeline", "test", namespace="kubeflow-dvic")
-
-#  ==== EXAMPLE WITH HELPER ====
-
-if __name__ == '__main__':
-
-    with DVICPipelineWrapper("my-pipeline", "This is my pipeline").set_exp("blue-example") as pipeline:
-
-        # Elements
-        elem1 = DVICContainerOperation("win32gg/testw", "-p", "/data/out").select_node().mount_host_path("/data", "/data/dl/test")
-        elem2 = DVICContainerOperation("win32gg/testw", "-p", "/data/oue").select_node().mount_host_path("/data", "/data/dl/test")
-
-        # Execution order, elem1 then elem2
-        elem1 | elem2
-
-        # Start pipeline
-        pipeline()
+def noop(name):
+    return DVICContainerOperation(
+        "busybox", "/bin/sh", "-c", "echo no operation", name=name,
+    )
