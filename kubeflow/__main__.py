@@ -45,7 +45,7 @@ def nameset(name: str, samples: int) -> ContainerOperation:
             f"--tile {DATASET_TILE} ;",
             f"exit 0", #TODO: Fix when no more bpy segfault on exit
         )),
-        name="trainset",
+        name=f"{name}set",
     ).select_node().mount_host_path(BASE_PATH, MOUNT_PATH).gpu(DATASET_GPU)
 
 
