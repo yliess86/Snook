@@ -3,6 +3,7 @@ import logging
 import multiprocessing
 import uuid
 import datetime
+import os
 from typing import Dict, List
 
 def my_config_init(self, host="http://localhost",
@@ -111,6 +112,7 @@ from kubernetes.client.models.v1_node_selector import V1NodeSelector
 from kubernetes.client.models.v1_node_selector_requirement import V1NodeSelectorRequirement
 from kubernetes.client.models.v1_node_selector_term import V1NodeSelectorTerm
 from kubernetes.client.models.v1_host_path_volume_source import V1HostPathVolumeSource
+from kubernetes.client.models.v1_empty_dir_volume_source import V1EmptyDirVolumeSource
 import uuid
 
 Configuration.__init__  = my_config_init
@@ -128,17 +130,16 @@ class DVICContainerOperation:
     """
 
     def __init__(self, image : str, *args : List[str], name : str = "unnamed-operation", file_outputs : Dict[str,str] = None):
-        # file_outputs={"hello_output": "/out"} 
+        # file_outputs={"hello_output": "/out"}
         # See https://www.kubeflow.org/docs/pipelines/sdk/pipelines-metrics/ for metrics
         self.image = image
         self.args = args
         self.name = name
-        self.file_outputs = file_outputs
+        self.file_outputs = file_outputs if file_outputs else {}
         self.node = None
         self.ngpu = None
         self.volumes = []
         self.after = []
-        self.wdir = None
         if DVICPipelineWrapper.current_pipeline:
             DVICPipelineWrapper.current_pipeline += self
 
@@ -146,23 +147,24 @@ class DVICContainerOperation:
         """
         To be called in a pipeline
         """
+        # Add shm
+        self.volumes.append({'/dev/shm': V1Volume(name="dshm", empty_dir=V1EmptyDirVolumeSource(medium='Memory'))})
+
         self.op = kfp.dsl.ContainerOp(self.name, self.image, arguments=self.args, file_outputs = self.file_outputs)
         if self.node:
             self.op.add_affinity(V1Affinity(node_affinity=V1NodeAffinity(required_during_scheduling_ignored_during_execution=V1NodeSelector(node_selector_terms=[V1NodeSelectorTerm(match_expressions=[V1NodeSelectorRequirement(key='kubernetes.io/hostname', operator='In', values=[self.node])])]))))
         if self.ngpu:
             self.op.set_gpu_limit(self.ngpu)
-        if self.working_dir:
-            self.op.working_dir = self.wdir
         if len(self.volumes) > 0:
             for vol in self.volumes:
                 self.op.add_pvolumes(vol)
+       
     
     def _apply_order(self):
         if len(self.after) > 0:
             for e in self.after:
                 self.op.after(e.op)
 
-            
     def __or__(self, other):
         other.after.append(self)
         return other
@@ -174,15 +176,19 @@ class DVICContainerOperation:
         self.node = name
         return self
 
+    def tensorboard(self, path):
+        self.mount_host_path("/logs", os.path.join(path, self.name))
+        return self
+
+    def file_output(self, name, in_container):
+        self.file_outputs[name] = in_container
+        return self
+
     def gpu(self, request=1):
         """
         Requested number of GPUs
         """
         self.ngpu = request
-        return self
-
-    def working_dir(self, path):
-        self.wdir = path
         return self
 
     def mount_host_path(self, container_path, host_path, name=None):
@@ -191,6 +197,8 @@ class DVICContainerOperation:
         """
         if not name:
             name = str(uuid.uuid4())
+        if name == 'dshm' or container_path == '/dev/shm':
+            raise ConfigError("SHM is present by default and does not need supplementary configuration.")
         self.volumes.append({container_path: V1Volume(name=name, host_path=V1HostPathVolumeSource(host_path))})
         return self
 
@@ -199,7 +207,7 @@ class DVICPipelineWrapper:
 
     current_pipeline = None
 
-    def __init__(self, name, description, exp = None, namespace="dvic-kf"):
+    def __init__(self, name, description, run_name = None, exp = None, namespace="dvic-kf"):
         self.name = name
         self.description = description
         self.namepsace = namespace
@@ -207,6 +215,7 @@ class DVICPipelineWrapper:
         self.exp = name if not exp else exp
         self.func = None
         self.res = None
+        self.run_name = run_name if run_name else f'{self.name} {str(datetime.datetime.now())}'
 
     def set_exp(self, exp):
         self.exp = exp
@@ -257,13 +266,10 @@ class DVICPipelineWrapper:
         splogger.fine(f'Starting pipeline {self.name}')
         warnings.filterwarnings("ignore")
         c = kfp.Client("https://kubflow.dvic.devinci.fr/pipeline")
-        self.res = c.create_run_from_pipeline_func(self.func if self.func != None else self._generic_pipeline(), kwargs, f'{self.name} {str(datetime.datetime.now())}', self.name, namespace=self.namepsace)
+        self.res = c.create_run_from_pipeline_func(self.func if self.func != None else self._generic_pipeline(), kwargs, self.run_name, self.name, namespace=self.namepsace)
         splogger.success(f'Pipeline started', strong=True)
         splogger.success(f'Pipeline URL: https://kubflow.dvic.devinci.fr/_/pipeline/#/experiments/details/{self.res.run_id}')
         return self
 
-
 def noop(name):
-    return DVICContainerOperation(
-        "busybox", "/bin/sh", "-c", "echo no operation", name=name,
-    )
+    return DVICContainerOperation("busybox", "/bin/sh", "-c", "echo no operation", name=name)
