@@ -123,8 +123,7 @@ if __name__ == '__main__':
             if is_train:
                 loss.backward()
                 scaler.step(optim)
-                
-            scaler.update()
+                scaler.update()
             
             total_loss += loss.item()
             total_acc += acc.item()

@@ -102,8 +102,7 @@ if __name__ == "__main__":
             if is_train:
                 loss.backward()
                 scaler.step(optim)
-                
-            scaler.update()
+                scaler.update()
             
             total_loss += loss.item()
             pbar.set_postfix(loss=total_loss / len(loader), spread=spread)
