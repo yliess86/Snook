@@ -96,11 +96,9 @@ if __name__ == "__main__":
             
             with autocast():
                 loss = criterion(model(render).squeeze(1), heatmap)
-            
-            loss = scaler.scale(loss)
 
             if is_train:
-                loss.backward()
+                scaler.scale(loss).backward()
                 scaler.step(optim)
                 scaler.update()
             

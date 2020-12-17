@@ -116,12 +116,9 @@ if __name__ == '__main__':
                 logits = model(window)
                 loss = criterion(logits, label)
                 acc = (torch.argmax(logits, dim=1) == label).sum()
-            
-            loss = scaler.scale(loss)
-            acc = scaler.scale(acc)
 
             if is_train:
-                loss.backward()
+                scaler.scale(loss).backward()
                 scaler.step(optim)
                 scaler.update()
             
